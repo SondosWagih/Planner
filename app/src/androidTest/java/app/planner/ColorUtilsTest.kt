@@ -1,6 +1,7 @@
 package app.planner
 
 import app.planner.ui.study.ColorTheme
+import app.planner.ui.study.DefaultCourseColor
 import app.planner.ui.study.parseHexColor
 import app.planner.ui.study.toHex
 import org.junit.Assert.*
@@ -27,5 +28,9 @@ class ColorUtilsTest {
 
     @Test fun eachThemeIsSmall() {
         assertTrue(ColorTheme.entries.all { it.colors.size == 6 })
+    }
+
+    @Test fun defaultCourseColorMatchesTheVividBlue() {
+        assertEquals(ColorTheme.VIVID.colors[4], DefaultCourseColor)
     }
 }

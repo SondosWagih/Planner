@@ -32,8 +32,6 @@ import kotlin.math.hypot
 import kotlin.math.sin
 import android.graphics.Color as AndroidColor
 
-private fun hexes(vararg h: String): List<Int> = h.map { 0xFF000000.toInt() or it.toInt(16) }
-
 /** Ready-made colours, grouped into themes so only a handful are on screen at once. */
 enum class ColorTheme(@StringRes val label: Int, val colors: List<Int>) {
     PASTEL(R.string.palette_pastel, hexes("F8BBD0", "E1BEE7", "BBDEFB", "B2EBF2", "C8E6C9", "FFE0B2")),
@@ -44,7 +42,8 @@ enum class ColorTheme(@StringRes val label: Int, val colors: List<Int>) {
     NEUTRAL(R.string.palette_neutral, hexes("212121", "424242", "616161", "757575", "9E9E9E", "BDBDBD")),
 }
 
-val DefaultCourseColor: Int = ColorTheme.VIVID.colors[4] // blue
+/** Same blue as ColorTheme.VIVID[4], written as a literal to avoid a class-initialisation cycle. */
+val DefaultCourseColor: Int = 0xFF1E88E5.toInt()
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
