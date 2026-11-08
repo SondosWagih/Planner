@@ -1,22 +1,15 @@
 package app.planner.ui.study
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import app.planner.R
@@ -55,6 +48,7 @@ fun FormDialog(
 fun TextInput(
     label: String,
     value: String,
+    placeholder: String? = null,
     singleLine: Boolean = true,
     numeric: Boolean = false,
     onChange: (String) -> Unit,
@@ -63,6 +57,7 @@ fun TextInput(
         value = value,
         onValueChange = onChange,
         label = { Text(label) },
+        placeholder = placeholder?.let { { Text(it) } },
         singleLine = singleLine,
         keyboardOptions = if (numeric) KeyboardOptions(keyboardType = KeyboardType.Number) else KeyboardOptions.Default,
         modifier = Modifier.fillMaxWidth(),
@@ -83,6 +78,29 @@ fun <T> ChoiceRow(
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             options.forEach { o ->
                 FilterChip(selected = o == selected, onClick = { onSelect(o) }, label = { Text(optionLabel(o)) })
+            }
+        }
+    }
+}
+
+/** Several options can be selected; tapping a selected one removes it again. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun <T> MultiChoiceFlow(
+    label: String,
+    hint: String?,
+    options: List<T>,
+    selected: Set<T>,
+    onToggle: (T) -> Unit,
+    optionLabel: (T) -> String,
+) {
+    Column {
+        Text(label, style = MaterialTheme.typography.labelLarge)
+        if (hint != null) Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(4.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            options.forEach { o ->
+                FilterChip(selected = o in selected, onClick = { onToggle(o) }, label = { Text(optionLabel(o)) })
             }
         }
     }
@@ -112,7 +130,8 @@ fun TimeField(label: String, minute: Int?, onPick: (Int) -> Unit, onClear: (() -
     }
     if (show) {
         val initial = minute ?: 540
-        val state = rememberTimePickerState(initialHour = initial / 60, initialMinute = initial % 60, is24Hour = true)
+        // 12-hour clock with AM/PM; state.hour is still 0..23.
+        val state = rememberTimePickerState(initialHour = initial / 60, initialMinute = initial % 60, is24Hour = false)
         AlertDialog(
             onDismissRequest = { show = false },
             confirmButton = {
@@ -146,4 +165,33 @@ fun DateField(label: String, epochDay: Long, onPick: (Long) -> Unit) {
             dismissButton = { TextButton(onClick = { show = false }) { Text(stringResource(R.string.cancel)) } },
         ) { DatePicker(state = state) }
     }
+}
+
+/** Hours | minutes | seconds side by side (in RTL, hours sit on the right). */
+@Composable
+fun DurationFields(
+    hours: String, minutes: String, seconds: String,
+    onHours: (String) -> Unit, onMinutes: (String) -> Unit, onSeconds: (String) -> Unit,
+) {
+    Column {
+        Text(stringResource(R.string.field_duration_hms), style = MaterialTheme.typography.labelLarge)
+        Spacer(Modifier.height(4.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            NumberBox(stringResource(R.string.unit_hours), hours, onHours, Modifier.weight(1f))
+            NumberBox(stringResource(R.string.unit_minutes), minutes, onMinutes, Modifier.weight(1f))
+            NumberBox(stringResource(R.string.unit_seconds), seconds, onSeconds, Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun NumberBox(label: String, value: String, onChange: (String) -> Unit, modifier: Modifier) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = { onChange(it.filter { c -> c.isDigit() }.take(2)) },
+        label = { Text(label) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        modifier = modifier,
+    )
 }

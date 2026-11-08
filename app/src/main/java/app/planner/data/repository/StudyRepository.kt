@@ -6,6 +6,8 @@ import app.planner.data.local.entity.*
 import app.planner.domain.model.*
 import app.planner.domain.validation.StudyValidator
 import app.planner.domain.validation.ValidationError
+import java.time.Instant
+import java.time.ZoneId
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -47,24 +49,40 @@ class StudyRepository(
         return null
     }
 
+    /**
+     * Creating: one row per selected day. Editing: the row being edited keeps its day if it is still selected
+     * (otherwise it moves to the first selected day) and every other selected day gets a new copy.
+     */
     suspend fun saveEvent(d: StudyEventDraft): ValidationError? {
         StudyValidator.studyEvent(d)?.let { return it }
         val courseId = d.courseId ?: return ValidationError.COURSE_REQUIRED
         if (!courseExists(courseId)) return ValidationError.COURSE_REQUIRED
+        val days = d.days.toSortedSet().toList()
         val t = now()
         val id = d.id
-        if (id == null) {
-            db.studyEventDao().insert(
-                StudyEventEntity(courseId = courseId, type = d.type, attendance = d.attendance,
-                    dayOfWeek = d.dayOfWeek, startMinute = d.startMinute, endMinute = d.endMinute,
-                    location = d.location.clean(), onlineLink = d.onlineLink.clean(), notes = d.notes.clean(),
-                    createdAt = t, updatedAt = t)
-            )
-        } else {
-            val old = db.studyEventDao().get(id)?.takeIf { it.deletedAt == null } ?: return ValidationError.NOT_FOUND
-            db.studyEventDao().update(old.copy(courseId = courseId, type = d.type, attendance = d.attendance,
-                dayOfWeek = d.dayOfWeek, startMinute = d.startMinute, endMinute = d.endMinute,
-                location = d.location.clean(), onlineLink = d.onlineLink.clean(), notes = d.notes.clean(), updatedAt = t))
+        val old = if (id == null) null
+        else (db.studyEventDao().get(id)?.takeIf { it.deletedAt == null } ?: return ValidationError.NOT_FOUND)
+
+        fun row(day: Int) = StudyEventEntity(
+            courseId = courseId, type = d.type, attendance = d.attendance, dayOfWeek = day,
+            startMinute = d.startMinute, endMinute = d.endMinute,
+            location = d.location.clean(), onlineLink = d.onlineLink.clean(), notes = d.notes.clean(),
+            createdAt = t, updatedAt = t,
+        )
+
+        db.withTransaction {
+            if (old == null) {
+                days.forEach { db.studyEventDao().insert(row(it)) }
+            } else {
+                val keep = if (old.dayOfWeek in days) old.dayOfWeek else days.first()
+                val fresh = row(keep)
+                db.studyEventDao().update(old.copy(
+                    courseId = fresh.courseId, type = fresh.type, attendance = fresh.attendance, dayOfWeek = keep,
+                    startMinute = fresh.startMinute, endMinute = fresh.endMinute, location = fresh.location,
+                    onlineLink = fresh.onlineLink, notes = fresh.notes, updatedAt = t,
+                ))
+                days.filter { it != keep }.forEach { db.studyEventDao().insert(row(it)) }
+            }
         }
         return null
     }
@@ -116,17 +134,19 @@ class StudyRepository(
         d.courseId?.let { if (!courseExists(it)) return ValidationError.COURSE_REQUIRED }
         val t = now()
         val id = d.id
+        val minutes = d.durationSeconds / 60
+        val seconds = d.durationSeconds % 60
         if (id == null) {
+            // dateEpochDay/startMinute are no longer user-facing; they just record when the session was created.
+            val today = Instant.ofEpochMilli(t).atZone(ZoneId.systemDefault()).toLocalDate().toEpochDay()
             db.studySessionDao().insert(
-                StudySessionEntity(courseId = d.courseId, title = d.title.trim(), dateEpochDay = d.dateEpochDay,
-                    startMinute = d.startMinute, durationMinutes = d.durationMinutes, notes = d.notes.clean(),
-                    createdAt = t, updatedAt = t)
+                StudySessionEntity(courseId = d.courseId, title = d.title.trim(), dateEpochDay = today, startMinute = 0,
+                    durationMinutes = minutes, extraSeconds = seconds, notes = d.notes.clean(), createdAt = t, updatedAt = t)
             )
         } else {
             val old = db.studySessionDao().get(id)?.takeIf { it.deletedAt == null } ?: return ValidationError.NOT_FOUND
             db.studySessionDao().update(old.copy(courseId = d.courseId, title = d.title.trim(),
-                dateEpochDay = d.dateEpochDay, startMinute = d.startMinute, durationMinutes = d.durationMinutes,
-                notes = d.notes.clean(), updatedAt = t))
+                durationMinutes = minutes, extraSeconds = seconds, notes = d.notes.clean(), updatedAt = t))
         }
         return null
     }

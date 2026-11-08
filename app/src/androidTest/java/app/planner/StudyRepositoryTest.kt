@@ -32,13 +32,16 @@ class StudyRepositoryTest {
         return repo.courses.first().first { it.name == name }.id
     }
 
-    private fun event(courseId: Long, type: StudyEventType, attendance: AttendanceFormat, start: Int = 540, end: Int = 630) =
-        StudyEventDraft(courseId = courseId, type = type, attendance = attendance, dayOfWeek = 2, startMinute = start, endMinute = end)
+    private fun event(
+        courseId: Long, type: StudyEventType = StudyEventType.LECTURE,
+        attendance: AttendanceFormat = AttendanceFormat.PHYSICAL,
+        days: Set<Int> = setOf(2), start: Int = 540, end: Int = 630,
+    ) = StudyEventDraft(courseId = courseId, type = type, attendance = attendance, days = days, startMinute = start, endMinute = end)
 
     @Test fun invalidEventIsRejectedAndNothingIsStored() = runBlocking {
         val cid = newCourse()
-        val err = repo.saveEvent(event(cid, StudyEventType.LECTURE, AttendanceFormat.PHYSICAL, start = 600, end = 540))
-        assertEquals(ValidationError.END_BEFORE_START, err)
+        assertEquals(ValidationError.END_BEFORE_START, repo.saveEvent(event(cid, start = 600, end = 540)))
+        assertEquals(ValidationError.DAY_INVALID, repo.saveEvent(event(cid, days = emptySet())))
         assertTrue(repo.events.first().isEmpty())
     }
 
@@ -48,28 +51,60 @@ class StudyRepositoryTest {
         assertEquals(4, repo.events.first().size)
     }
 
-    @Test fun editingUpdatesTheSameRowInsteadOfDuplicating() = runBlocking {
+    @Test fun selectingSeveralDaysCreatesOneRowPerDay() = runBlocking {
         val cid = newCourse()
-        repo.saveEvent(event(cid, StudyEventType.LECTURE, AttendanceFormat.PHYSICAL))
+        assertNull(repo.saveEvent(event(cid, days = setOf(1, 3, 5))))
+        val rows = repo.events.first()
+        assertEquals(listOf(1, 3, 5), rows.map { it.dayOfWeek }.sorted())
+        assertTrue(rows.all { it.courseId == cid && it.startMinute == 540 && it.endMinute == 630 })
+    }
+
+    @Test fun editingKeepsTheRowAndAddsCopiesForNewDays() = runBlocking {
+        val cid = newCourse()
+        repo.saveEvent(event(cid, days = setOf(2)))
         val saved = repo.events.first().single()
-        assertNull(repo.saveEvent(event(cid, StudyEventType.SECTION, AttendanceFormat.ONLINE).copy(id = saved.id)))
+        assertNull(repo.saveEvent(event(cid, type = StudyEventType.SECTION, days = setOf(2, 4)).copy(id = saved.id)))
+        val rows = repo.events.first()
+        assertEquals(2, rows.size)
+        assertEquals(StudyEventType.SECTION, rows.first { it.id == saved.id }.type)
+        assertEquals(2, rows.first { it.id == saved.id }.dayOfWeek)
+        assertEquals(setOf(2, 4), rows.map { it.dayOfWeek }.toSet())
+    }
+
+    @Test fun deselectingTheOriginalDayMovesTheRow() = runBlocking {
+        val cid = newCourse()
+        repo.saveEvent(event(cid, days = setOf(2)))
+        val saved = repo.events.first().single()
+        assertNull(repo.saveEvent(event(cid, days = setOf(4)).copy(id = saved.id)))
         val after = repo.events.first().single()
         assertEquals(saved.id, after.id)
-        assertEquals(StudyEventType.SECTION, after.type)
-        assertEquals(AttendanceFormat.ONLINE, after.attendance)
+        assertEquals(4, after.dayOfWeek)
     }
 
     @Test fun eventForMissingCourseIsRejected() = runBlocking {
-        val err = repo.saveEvent(event(999, StudyEventType.LECTURE, AttendanceFormat.ONLINE))
-        assertEquals(ValidationError.COURSE_REQUIRED, err)
+        assertEquals(ValidationError.COURSE_REQUIRED, repo.saveEvent(event(999)))
+    }
+
+    @Test fun examCanBeSavedWithoutATitle() = runBlocking {
+        val cid = newCourse()
+        assertNull(repo.saveExam(ExamDraft(courseId = cid, kind = ExamKind.MIDTERM, dateEpochDay = 20000, startMinute = 600, durationMinutes = 90)))
+        assertEquals("", repo.exams.first().single().title)
+    }
+
+    @Test fun sessionLengthIsStoredAsMinutesPlusSeconds() = runBlocking {
+        assertNull(repo.saveSession(SessionDraft(durationSeconds = 3725))) // 1h 2m 5s, no course, no title
+        val s = repo.sessions.first().single()
+        assertEquals(62, s.durationMinutes)
+        assertEquals(5, s.extraSeconds)
+        assertEquals(3725, s.totalSeconds)
     }
 
     @Test fun deletingACourseHidesAllItsChildren() = runBlocking {
         val cid = newCourse()
-        repo.saveEvent(event(cid, StudyEventType.LECTURE, AttendanceFormat.PHYSICAL))
-        repo.saveExam(ExamDraft(courseId = cid, kind = ExamKind.MIDTERM, title = "Mid", dateEpochDay = 20000, startMinute = 600, durationMinutes = 90))
+        repo.saveEvent(event(cid))
+        repo.saveExam(ExamDraft(courseId = cid, kind = ExamKind.MIDTERM, dateEpochDay = 20000, startMinute = 600, durationMinutes = 90))
         repo.saveAssignment(AssignmentDraft(courseId = cid, title = "HW1", dueEpochDay = 20001))
-        repo.saveSession(SessionDraft(courseId = cid, title = "Review", dateEpochDay = 20002, startMinute = 1000, durationMinutes = 60))
+        repo.saveSession(SessionDraft(courseId = cid, durationSeconds = 3600))
         repo.deleteCourse(cid)
         assertTrue(repo.courses.first().isEmpty())
         assertTrue(repo.events.first().isEmpty())

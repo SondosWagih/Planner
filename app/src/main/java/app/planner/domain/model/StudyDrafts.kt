@@ -11,14 +11,16 @@ data class CourseDraft(
     val instructor: String? = null, val colorArgb: Int,
 )
 
+/** `days` are ISO weekdays (1 = Monday .. 7 = Sunday). One row is stored per selected day. */
 data class StudyEventDraft(
     val id: Long? = null, val courseId: Long?, val type: StudyEventType, val attendance: AttendanceFormat,
-    val dayOfWeek: Int, val startMinute: Int, val endMinute: Int,
+    val days: Set<Int>, val startMinute: Int, val endMinute: Int,
     val location: String? = null, val onlineLink: String? = null, val notes: String? = null,
 )
 
+/** A blank title means "use <exam type> <course name>" (computed when shown). */
 data class ExamDraft(
-    val id: Long? = null, val courseId: Long?, val kind: ExamKind, val title: String,
+    val id: Long? = null, val courseId: Long?, val kind: ExamKind, val title: String = "",
     val dateEpochDay: Long, val startMinute: Int, val durationMinutes: Int,
     val location: String? = null, val notes: String? = null,
 )
@@ -28,7 +30,8 @@ data class AssignmentDraft(
     val dueEpochDay: Long, val dueMinute: Int? = null, val priority: Priority = Priority.MEDIUM,
 )
 
+/** A timer-style study session: course and title are optional, the length is in seconds. */
 data class SessionDraft(
-    val id: Long? = null, val courseId: Long?, val title: String, val dateEpochDay: Long,
-    val startMinute: Int, val durationMinutes: Int, val notes: String? = null,
+    val id: Long? = null, val courseId: Long? = null, val title: String = "",
+    val durationSeconds: Int, val notes: String? = null,
 )

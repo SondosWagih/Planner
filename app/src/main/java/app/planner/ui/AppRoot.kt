@@ -6,7 +6,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import android.content.Context
+import android.media.RingtoneManager
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -25,10 +30,12 @@ import app.planner.ui.study.ExamsScreen
 import app.planner.ui.study.PlannerScreen
 import app.planner.ui.study.ScheduleScreen
 import app.planner.ui.study.StudyViewModel
+import app.planner.ui.study.TimerViewModel
+import app.planner.ui.study.sessionDisplayTitle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppRoot(settingsViewModel: SettingsViewModel, studyViewModel: StudyViewModel) {
+fun AppRoot(settingsViewModel: SettingsViewModel, studyViewModel: StudyViewModel, timerViewModel: TimerViewModel) {
     val nav = rememberNavController()
     val entry by nav.currentBackStackEntryAsState()
     val route = entry?.destination?.route
@@ -76,8 +83,30 @@ fun AppRoot(settingsViewModel: SettingsViewModel, studyViewModel: StudyViewModel
             composable(StudyDestination.COURSES.route) { CoursesScreen(studyViewModel) }
             composable(StudyDestination.EXAMS.route) { ExamsScreen(studyViewModel) }
             composable(StudyDestination.ASSIGNMENTS.route) { AssignmentsScreen(studyViewModel) }
-            composable(StudyDestination.PLANNER.route) { PlannerScreen(studyViewModel) }
+            composable(StudyDestination.PLANNER.route) { PlannerScreen(studyViewModel, timerViewModel) }
             composable(Routes.SETTINGS) { SettingsScreen(settingsViewModel) }
         }
+    }
+    // A finished timer is announced on any screen.
+    val finishedId by timerViewModel.finishedSessionId.collectAsStateWithLifecycle()
+    val studyState by studyViewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    LaunchedEffect(finishedId) { if (finishedId != null) playDoneSound(context) }
+    finishedId?.let { id ->
+        val session = studyState.sessions.firstOrNull { it.id == id }
+        val courseName = studyState.courses.firstOrNull { it.id == session?.courseId }?.name
+        val title = session?.let { sessionDisplayTitle(it, courseName) } ?: stringResource(R.string.session_default_title)
+        AlertDialog(
+            onDismissRequest = { timerViewModel.dismissFinished() },
+            title = { Text(stringResource(R.string.timer_done_title)) },
+            text = { Text(stringResource(R.string.timer_done_msg, title)) },
+            confirmButton = { TextButton(onClick = { timerViewModel.dismissFinished() }) { Text(stringResource(R.string.ok)) } },
+        )
+    }
+}
+
+private fun playDoneSound(context: Context) {
+    runCatching {
+        RingtoneManager.getRingtone(context, RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))?.play()
     }
 }

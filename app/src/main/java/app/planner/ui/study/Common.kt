@@ -71,6 +71,7 @@ fun ItemCard(
     onClick: () -> Unit,
     onDelete: () -> Unit,
     leading: (@Composable () -> Unit)? = null,
+    extraAction: (@Composable () -> Unit)? = null,
 ) {
     Card(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Row(Modifier.height(IntrinsicSize.Min), verticalAlignment = Alignment.CenterVertically) {
@@ -82,6 +83,7 @@ fun ItemCard(
                     Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+            extraAction?.invoke()
             IconButton(onClick = onDelete) {
                 Icon(Icons.Outlined.Delete, contentDescription = stringResource(R.string.delete))
             }

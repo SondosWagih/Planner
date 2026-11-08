@@ -5,6 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import app.planner.data.local.dao.*
 import app.planner.data.local.entity.*
 
@@ -14,7 +15,7 @@ import app.planner.data.local.entity.*
         ExamEntity::class, AssignmentEntity::class,
         NotificationRecordEntity::class, AppSettingEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -28,7 +29,14 @@ abstract class AppDatabase : RoomDatabase() {
 
     companion object {
         /** One explicit Migration per schema bump. Destructive fallback is deliberately NOT enabled. */
-        val MIGRATIONS: Array<Migration> = emptyArray()
+        /** v2: study sessions can have a seconds part (timer). Existing rows keep their minutes. */
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE study_sessions ADD COLUMN extraSeconds INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2)
 
         fun build(context: Context): AppDatabase =
             Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "planner.db")

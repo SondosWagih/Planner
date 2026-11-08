@@ -1,5 +1,6 @@
 package app.planner.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -64,7 +65,10 @@ data class StudySessionEntity(
     val title: String,
     val dateEpochDay: Long,
     val startMinute: Int,
+    /** Whole minutes of the session. Total length = durationMinutes * 60 + extraSeconds. */
     val durationMinutes: Int,
+    /** 0..59, added in schema v2 so a session can be set in hours/minutes/seconds. */
+    @ColumnInfo(defaultValue = "0") val extraSeconds: Int = 0,
     val notes: String? = null,
     val completed: Boolean = false,
     val createdAt: Long,
@@ -147,3 +151,6 @@ data class AppSettingEntity(
     val value: String,
     val updatedAt: Long,
 )
+
+/** Total length of a study session in seconds. */
+val StudySessionEntity.totalSeconds: Int get() = durationMinutes * 60 + extraSeconds
