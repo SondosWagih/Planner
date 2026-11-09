@@ -10,7 +10,7 @@ import app.planner.domain.validation.ValidationError
 typealias SaveHandler<D> = (D, (ValidationError?) -> Unit) -> Unit
 
 @Composable
-fun CourseForm(initial: CourseEntity?, onDismiss: () -> Unit, onSave: SaveHandler<CourseDraft>) {
+fun CourseForm(initial: CourseEntity?, onDismiss: () -> Unit, onSave: SaveHandler<CourseDraft>, onDelete: (() -> Unit)? = null) {
     var name by remember { mutableStateOf(initial?.name ?: "") }
     var code by remember { mutableStateOf(initial?.code ?: "") }
     var instructor by remember { mutableStateOf(initial?.instructor ?: "") }
@@ -18,7 +18,7 @@ fun CourseForm(initial: CourseEntity?, onDismiss: () -> Unit, onSave: SaveHandle
     var error by remember { mutableStateOf<ValidationError?>(null) }
     FormDialog(stringResource(R.string.form_course), error, onDismiss, onSave = {
         onSave(CourseDraft(initial?.id, name, code, instructor, color)) { e -> if (e == null) onDismiss() else error = e }
-    }) {
+    }, onDelete = onDelete) {
         TextInput(stringResource(R.string.field_name), name) { name = it }
         TextInput(stringResource(R.string.field_code), code, placeholder = stringResource(R.string.field_code_hint)) { code = it }
         TextInput(stringResource(R.string.field_instructor), instructor) { instructor = it }
@@ -38,8 +38,8 @@ fun EventForm(
     var type by remember { mutableStateOf(initial?.type ?: StudyEventType.LECTURE) }
     var attendance by remember { mutableStateOf(initial?.attendance ?: AttendanceFormat.PHYSICAL) }
     var days by remember { mutableStateOf(initial?.let { setOf(it.dayOfWeek) } ?: emptySet<Int>()) }
-    var start by remember { mutableIntStateOf(initial?.startMinute ?: 540) }
-    var end by remember { mutableIntStateOf(initial?.endMinute ?: 630) }
+    var start by remember { mutableIntStateOf(initial?.startMinute ?: DEFAULT_CLASS_START_MINUTE) }
+    var end by remember { mutableIntStateOf(initial?.endMinute ?: DEFAULT_CLASS_END_MINUTE) }
     var location by remember { mutableStateOf(initial?.location ?: "") }
     var link by remember { mutableStateOf(initial?.onlineLink ?: "") }
     var notes by remember { mutableStateOf(initial?.notes ?: "") }
@@ -103,7 +103,13 @@ fun ExamForm(
 }
 
 @Composable
-fun AssignmentForm(initial: AssignmentEntity?, courses: List<CourseEntity>, onDismiss: () -> Unit, onSave: SaveHandler<AssignmentDraft>) {
+fun AssignmentForm(
+    initial: AssignmentEntity?,
+    courses: List<CourseEntity>,
+    onDismiss: () -> Unit,
+    onSave: SaveHandler<AssignmentDraft>,
+    onDelete: (() -> Unit)? = null,
+) {
     var courseId by remember { mutableStateOf(initial?.courseId ?: courses.firstOrNull()?.id) }
     var title by remember { mutableStateOf(initial?.title ?: "") }
     var description by remember { mutableStateOf(initial?.description ?: "") }
@@ -115,7 +121,7 @@ fun AssignmentForm(initial: AssignmentEntity?, courses: List<CourseEntity>, onDi
         onSave(AssignmentDraft(initial?.id, courseId, title, description, due, dueMinute, priority)) { e ->
             if (e == null) onDismiss() else error = e
         }
-    }) {
+    }, onDelete = onDelete) {
         CourseChoice(courses, courseId, allowNone = false) { courseId = it }
         TextInput(stringResource(R.string.field_title), title) { title = it }
         TextInput(stringResource(R.string.field_description), description, singleLine = false) { description = it }
@@ -126,7 +132,13 @@ fun AssignmentForm(initial: AssignmentEntity?, courses: List<CourseEntity>, onDi
 }
 
 @Composable
-fun SessionForm(initial: StudySessionEntity?, courses: List<CourseEntity>, onDismiss: () -> Unit, onSave: SaveHandler<SessionDraft>) {
+fun SessionForm(
+    initial: StudySessionEntity?,
+    courses: List<CourseEntity>,
+    onDismiss: () -> Unit,
+    onSave: SaveHandler<SessionDraft>,
+    onDelete: (() -> Unit)? = null,
+) {
     val total = initial?.totalSeconds ?: (25 * 60)
     var courseId by remember { mutableStateOf(initial?.courseId) }
     var title by remember { mutableStateOf(initial?.title ?: "") }
@@ -138,7 +150,7 @@ fun SessionForm(initial: StudySessionEntity?, courses: List<CourseEntity>, onDis
     FormDialog(stringResource(R.string.form_session), error, onDismiss, onSave = {
         val secs = (hours.toIntOrNull() ?: 0) * 3600 + (minutes.toIntOrNull() ?: 0) * 60 + (seconds.toIntOrNull() ?: 0)
         onSave(SessionDraft(initial?.id, courseId, title, secs)) { e -> if (e == null) onDismiss() else error = e }
-    }) {
+    }, onDelete = onDelete) {
         CourseChoice(courses, courseId, allowNone = true) { courseId = it }
         TextInput(stringResource(R.string.field_title_optional), title, placeholder = autoTitle) { title = it }
         DurationFields(hours, minutes, seconds, { hours = it }, { minutes = it }, { seconds = it })

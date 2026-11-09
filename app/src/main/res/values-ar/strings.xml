@@ -116,4 +116,10 @@
     <string name="palette_jewel">جواهر</string>
     <string name="palette_dusty">هادئة</string>
     <string name="palette_candy">حلوى</string>
+    <string name="empty_courses">لا توجد مقررات بعد</string>
+    <string name="empty_assignments">لا توجد واجبات بعد</string>
+    <string name="empty_sessions">لا توجد جلسات مذاكرة بعد</string>
+    <string name="empty_hint">اضغط + للإضافة</string>
+    <string name="assignments_todo">المطلوب</string>
+    <string name="assignments_done">تم</string>
 </resources>

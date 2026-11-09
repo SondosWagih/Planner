@@ -17,7 +17,6 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.time.format.TextStyle
 import java.time.temporal.TemporalAdjusters
-import java.time.temporal.WeekFields
 import java.util.Locale
 
 @StringRes fun StudyEventType.label() = when (this) {
@@ -87,14 +86,18 @@ fun shortDayName(dayOfWeek: Int): String = DayOfWeek.of(dayOfWeek).getDisplayNam
 
 fun todayEpochDay(): Long = LocalDate.now().toEpochDay()
 
-/** ISO weekdays (1..7) starting from the locale's first day of the week. */
-fun weekDaysInOrder(): List<Int> {
-    val first = WeekFields.of(Locale.getDefault()).firstDayOfWeek.value
-    return (0..6).map { (first - 1 + it) % 7 + 1 }
-}
+/** The week runs from Saturday to Friday (ISO weekdays: Saturday = 6 ... Friday = 5). */
+val FIRST_DAY_OF_WEEK: DayOfWeek = DayOfWeek.SATURDAY
 
+fun weekDaysInOrder(): List<Int> = (0..6).map { FIRST_DAY_OF_WEEK.plus(it.toLong()).value }
+
+/** Epoch day of the Saturday that starts the current week. */
 fun currentWeekStart(): Long =
-    LocalDate.now().with(TemporalAdjusters.previousOrSame(WeekFields.of(Locale.getDefault()).firstDayOfWeek)).toEpochDay()
+    LocalDate.now().with(TemporalAdjusters.previousOrSame(FIRST_DAY_OF_WEEK)).toEpochDay()
+
+/** A new class starts at 8 AM and ends at 9:30 AM unless changed. */
+const val DEFAULT_CLASS_START_MINUTE = 8 * 60
+const val DEFAULT_CLASS_END_MINUTE = 8 * 60 + 90
 
 @Composable
 fun durationText(totalSeconds: Int): String {

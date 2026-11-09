@@ -4,7 +4,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.planner.R
@@ -54,32 +58,35 @@ fun PlannerScreen(viewModel: StudyViewModel, timer: TimerViewModel, modifier: Mo
             }
             LazyColumn(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
-                contentPadding = PaddingValues(16.dp, if (t.active) 0.dp else 16.dp, 16.dp, 96.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(16.dp, if (t.active) 0.dp else 12.dp, 16.dp, 96.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                if (ui.sessions.isEmpty()) item { EmptyText() }
+                if (ui.sessions.isEmpty()) item {
+                    EmptyState(Icons.Outlined.Timer, stringResource(R.string.empty_sessions), stringResource(R.string.empty_hint))
+                }
                 items(ui.sessions, key = { "session_${it.id}" }) { s ->
                     val course = courseById[s.courseId]
-                    ItemCard(
-                        tint = course?.let { Color(it.colorArgb) } ?: Color.Gray,
-                        title = sessionDisplayTitle(s, course?.name),
-                        lines = listOfNotNull(
-                            course?.name?.takeIf { s.title.isNotBlank() },
-                            durationText(s.totalSeconds),
-                            if (s.completed) stringResource(R.string.session_completed) else null,
-                        ),
-                        onClick = { editing = s },
-                        onDelete = { deleting = s },
-                        extraAction = {
-                            IconButton(onClick = { timer.start(s) }, enabled = !t.active) {
-                                Icon(
-                                    Icons.Filled.PlayArrow,
-                                    contentDescription = stringResource(R.string.start),
-                                    tint = if (t.active) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) else MaterialTheme.colorScheme.primary,
-                                )
-                            }
-                        },
-                    )
+                    ScreenCard(onClick = { editing = s }) {
+                        FilledTonalIconButton(onClick = { timer.start(s) }, enabled = !t.active, modifier = Modifier.size(48.dp)) {
+                            Icon(Icons.Filled.PlayArrow, contentDescription = stringResource(R.string.start))
+                        }
+                        Column(Modifier.weight(1f).padding(horizontal = 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                sessionDisplayTitle(s, course?.name),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            InfoLine(Icons.Outlined.Schedule, durationText(s.totalSeconds))
+                            if (course != null && s.title.isNotBlank()) Pill(course.name, dot = Color(course.colorArgb))
+                        }
+                        if (s.completed) {
+                            Icon(
+                                Icons.Filled.CheckCircle,
+                                contentDescription = stringResource(R.string.session_completed),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -87,7 +94,9 @@ fun PlannerScreen(viewModel: StudyViewModel, timer: TimerViewModel, modifier: Mo
     }
 
     if (creating) SessionForm(null, ui.courses, { creating = false }, viewModel::saveSession)
-    editing?.let { s -> SessionForm(s, ui.courses, { editing = null }, viewModel::saveSession) }
+    editing?.let { s ->
+        SessionForm(s, ui.courses, { editing = null }, viewModel::saveSession, onDelete = { editing = null; deleting = s })
+    }
     deleting?.let { s ->
         DeleteDialog(R.string.delete_item_msg, onConfirm = {
             if (t.snapshot.sessionId == s.id) timer.stop()

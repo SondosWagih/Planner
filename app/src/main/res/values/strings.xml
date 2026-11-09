@@ -116,4 +116,10 @@
     <string name="palette_jewel">Jewel</string>
     <string name="palette_dusty">Dusty</string>
     <string name="palette_candy">Candy</string>
+    <string name="empty_courses">No courses yet</string>
+    <string name="empty_assignments">No assignments yet</string>
+    <string name="empty_sessions">No study sessions yet</string>
+    <string name="empty_hint">Tap + to add one</string>
+    <string name="assignments_todo">To do</string>
+    <string name="assignments_done">Done</string>
 </resources>
