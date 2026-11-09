@@ -34,6 +34,13 @@ import android.graphics.Color as AndroidColor
 
 /** Ready-made colours, grouped into themes so only a handful are on screen at once. */
 enum class ColorTheme(@StringRes val label: Int, val colors: List<Int>) {
+    APRICOT(R.string.palette_apricot, hexes("FBA17E", "F9BC89", "F7D794", "FBB84A", "FF9A00", "F67E00", "EE6200", "BC795E")),
+    DEEPSEA(R.string.palette_deepsea, hexes("071B2B", "0E4C5C", "167D8D", "68B0BA", "B9E4E8", "D4E9EB", "EEEEEE", "77828A")),
+    ORCHID(R.string.palette_orchid, hexes("542177", "71208C", "8E1EA2", "B238A2", "D552A3", "B69DC0", "98E8DE", "A185B4")),
+    FOREST(R.string.palette_forest, hexes("1E3B2F", "4E644C", "7F8C6A", "A4A07A", "C8B48A", "DED2B8", "F5F0E6", "83938D")),
+    MEADOW(R.string.palette_meadow, hexes("F4BE38", "F0CC4B", "EDDA5E", "AFB83E", "71951E", "648524", "587529", "F9DB92")),
+    BERRY(R.string.palette_berry, hexes("421454", "61205B", "802C62", "C04452", "FF5B42", "FF9946", "FFD749", "977EA1")),
+    LATTE(R.string.palette_latte, hexes("FCF0DA", "D5CEA9", "AEAC78", "D0B871", "F2C46A", "9F8456", "4C4541", "BDB4A4")),
     PASTEL(R.string.palette_pastel, hexes("F8BBD0", "E1BEE7", "BBDEFB", "B2EBF2", "C8E6C9", "FFE0B2")),
     VIVID(R.string.palette_vivid, hexes("E53935", "FB8C00", "FDD835", "43A047", "1E88E5", "8E24AA")),
     EARTH(R.string.palette_earth, hexes("795548", "A1887F", "7D8F69", "C19A6B", "B7410E", "556B2F")),

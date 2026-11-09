@@ -108,4 +108,11 @@
     <string name="palette_ocean">بحرية</string>
     <string name="palette_sunset">غروب</string>
     <string name="palette_neutral">محايدة</string>
+    <string name="palette_apricot">مشمش</string>
+    <string name="palette_deepsea">أعماق البحر</string>
+    <string name="palette_orchid">أوركيد</string>
+    <string name="palette_forest">غابة</string>
+    <string name="palette_meadow">مرج</string>
+    <string name="palette_berry">توت</string>
+    <string name="palette_latte">لاتيه</string>
 </resources>

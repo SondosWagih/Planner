@@ -108,4 +108,11 @@
     <string name="palette_ocean">Ocean</string>
     <string name="palette_sunset">Sunset</string>
     <string name="palette_neutral">Neutral</string>
+    <string name="palette_apricot">Apricot</string>
+    <string name="palette_deepsea">Deep Sea</string>
+    <string name="palette_orchid">Orchid</string>
+    <string name="palette_forest">Forest</string>
+    <string name="palette_meadow">Meadow</string>
+    <string name="palette_berry">Berry</string>
+    <string name="palette_latte">Latte</string>
 </resources>

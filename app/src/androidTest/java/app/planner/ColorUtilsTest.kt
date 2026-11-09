@@ -26,8 +26,27 @@ class ColorUtilsTest {
         ColorTheme.entries.flatMap { it.colors }.forEach { assertEquals(it, parseHexColor(toHex(it))) }
     }
 
-    @Test fun eachThemeIsSmall() {
-        assertTrue(ColorTheme.entries.all { it.colors.size == 6 })
+    @Test fun everyThemeHasMoreThanFourDistinctColors() {
+        ColorTheme.entries.forEach { theme ->
+            assertTrue("${theme.name} needs more than 4 colours", theme.colors.size > 4)
+            assertEquals("${theme.name} has duplicate colours", theme.colors.size, theme.colors.toSet().size)
+        }
+    }
+
+    @Test fun yourSevenPalettesAreIncludedWithTheirOriginalColours() {
+        val expected = mapOf(
+            ColorTheme.APRICOT to listOf("FBA17E", "F7D794", "FF9A00", "EE6200"),
+            ColorTheme.DEEPSEA to listOf("071B2B", "167D8D", "B9E4E8", "EEEEEE"),
+            ColorTheme.ORCHID to listOf("542177", "8E1EA2", "D552A3", "98E8DE"),
+            ColorTheme.FOREST to listOf("1E3B2F", "7F8C6A", "C8B48A", "F5F0E6"),
+            ColorTheme.MEADOW to listOf("F4BE38", "EDDA5E", "71951E", "587529"),
+            ColorTheme.BERRY to listOf("421454", "802C62", "FF5B42", "FFD749"),
+            ColorTheme.LATTE to listOf("FCF0DA", "AEAC78", "F2C46A", "4C4541"),
+        )
+        expected.forEach { (theme, hexes) ->
+            val have = theme.colors.map { toHex(it) }
+            hexes.forEach { assertTrue("${theme.name} is missing #$it", it in have) }
+        }
     }
 
     @Test fun defaultCourseColorMatchesTheVividBlue() {
