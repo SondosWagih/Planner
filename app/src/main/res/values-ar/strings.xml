@@ -104,10 +104,8 @@
     <string name="color_wheel">عجلة الألوان</string>
     <string name="palette_pastel">باستيل</string>
     <string name="palette_vivid">زاهية</string>
-    <string name="palette_earth">ترابية</string>
     <string name="palette_ocean">بحرية</string>
     <string name="palette_sunset">غروب</string>
-    <string name="palette_neutral">محايدة</string>
     <string name="palette_apricot">مشمش</string>
     <string name="palette_deepsea">أعماق البحر</string>
     <string name="palette_orchid">أوركيد</string>
@@ -115,4 +113,7 @@
     <string name="palette_meadow">مرج</string>
     <string name="palette_berry">توت</string>
     <string name="palette_latte">لاتيه</string>
+    <string name="palette_jewel">جواهر</string>
+    <string name="palette_dusty">هادئة</string>
+    <string name="palette_candy">حلوى</string>
 </resources>

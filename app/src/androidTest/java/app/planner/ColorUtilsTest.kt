@@ -49,7 +49,13 @@ class ColorUtilsTest {
         }
     }
 
-    @Test fun defaultCourseColorMatchesTheVividBlue() {
-        assertEquals(ColorTheme.VIVID.colors[4], DefaultCourseColor)
+    @Test fun defaultCourseColorIsSafeToReadBeforeAnyThemeIsTouched() {
+        // Regression: ColorTheme and the default colour once initialised each other in a cycle.
+        assertEquals(0xFF1E88E5.toInt(), DefaultCourseColor)
+        assertTrue(ColorTheme.entries.isNotEmpty())
+    }
+
+    @Test fun thereAreFourteenThemes() {
+        assertEquals(14, ColorTheme.entries.size)
     }
 }

@@ -104,10 +104,8 @@
     <string name="color_wheel">Color wheel</string>
     <string name="palette_pastel">Pastel</string>
     <string name="palette_vivid">Vivid</string>
-    <string name="palette_earth">Earth</string>
     <string name="palette_ocean">Ocean</string>
     <string name="palette_sunset">Sunset</string>
-    <string name="palette_neutral">Neutral</string>
     <string name="palette_apricot">Apricot</string>
     <string name="palette_deepsea">Deep Sea</string>
     <string name="palette_orchid">Orchid</string>
@@ -115,4 +113,7 @@
     <string name="palette_meadow">Meadow</string>
     <string name="palette_berry">Berry</string>
     <string name="palette_latte">Latte</string>
+    <string name="palette_jewel">Jewel</string>
+    <string name="palette_dusty">Dusty</string>
+    <string name="palette_candy">Candy</string>
 </resources>
