@@ -10,12 +10,20 @@ import kotlinx.coroutines.launch
 class PlannerApp : Application() {
     lateinit var container: AppContainer
         private set
-    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /** Work that must outlive any screen (receivers use it too). */
+    val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
-        // Make sure the local device identifier exists from the very first launch.
-        appScope.launch { container.deviceIdProvider.getOrCreate() }
+        container.notifier.createChannels()
+        appScope.launch {
+            // Make sure the local device identifier exists from the very first launch.
+            container.deviceIdProvider.getOrCreate()
+            // Bring every alarm and the timer notification back in line with the data.
+            container.timerController.restore()
+            container.notificationScheduler.rescheduleAll()
+        }
     }
 }

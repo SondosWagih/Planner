@@ -1,11 +1,14 @@
 package app.planner.ui.study
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -15,6 +18,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.planner.R
 import app.planner.data.local.entity.AttendanceFormat
 import app.planner.data.local.entity.StudyEventEntity
+import app.planner.domain.schedule.WeekMath
 import java.time.LocalDate
 
 private sealed interface ScheduleDialog {
@@ -24,6 +28,7 @@ private sealed interface ScheduleDialog {
 @Composable
 fun ScheduleScreen(viewModel: StudyViewModel, modifier: Modifier = Modifier) {
     val ui by viewModel.state.collectAsStateWithLifecycle()
+    var weekStart by rememberSaveable { mutableStateOf(currentWeekStart()) }
     var dialog by remember { mutableStateOf<ScheduleDialog?>(null) }
     var deleting by remember { mutableStateOf<StudyEventEntity?>(null) }
     val courseById = remember(ui.courses) { ui.courses.associateBy { it.id } }
@@ -31,32 +36,53 @@ fun ScheduleScreen(viewModel: StudyViewModel, modifier: Modifier = Modifier) {
     if (ui.courses.isEmpty()) {
         CenteredMessage("screen_schedule", stringResource(R.string.add_course_first))
     } else {
-        val todayDow = LocalDate.now().dayOfWeek.value
-        val days = weekDaysInOrder().map { TimetableDay(key = it, label = shortDayName(it), highlight = it == todayDow) }
-        val items = ui.events.map { e ->
-            val course = courseById[e.courseId]
-            TimetableItem(
-                id = e.id,
-                dayKey = e.dayOfWeek,
-                startMinute = e.startMinute,
-                endMinute = e.endMinute,
-                title = course?.name ?: "—",
-                lines = listOfNotNull(
-                    "${formatMinute(e.startMinute)} – ${formatMinute(e.endMinute)}",
-                    "${stringResource(e.type.label())} • ${stringResource(e.attendance.label())}",
-                    e.location,
-                ),
-                color = course?.let { Color(it.colorArgb) } ?: Color.Gray,
-                icon = if (e.attendance == AttendanceFormat.ONLINE) Icons.Outlined.Videocam else Icons.Outlined.Place,
+        val today = todayEpochDay()
+        val order = weekDaysInOrder()
+        val days = (0..6).map { i ->
+            val date = LocalDate.ofEpochDay(weekStart + i)
+            TimetableDay(
+                key = i,
+                label = shortDayName(date.dayOfWeek.value),
+                sublabel = date.dayOfMonth.toString(),
+                highlight = date.toEpochDay() == today,
             )
         }
+        // Weekly classes show every week; alternating ones only in the weeks they belong to.
+        val items = ui.events
+            .filter { WeekMath.occursInWeek(it.repeatEveryWeeks, it.anchorWeekStart, weekStart) }
+            .map { e ->
+                val course = courseById[e.courseId]
+                TimetableItem(
+                    id = e.id,
+                    dayKey = order.indexOf(e.dayOfWeek),
+                    startMinute = e.startMinute,
+                    endMinute = e.endMinute,
+                    title = course?.name ?: "—",
+                    lines = listOfNotNull(
+                        "${formatMinute(e.startMinute)} – ${formatMinute(e.endMinute)}",
+                        "${stringResource(e.type.label())} • ${stringResource(e.attendance.label())}",
+                        e.topic,
+                        e.location,
+                    ),
+                    color = course?.let { Color(it.colorArgb) } ?: Color.Gray,
+                    icon = if (e.attendance == AttendanceFormat.ONLINE) Icons.Outlined.Videocam else Icons.Outlined.Place,
+                )
+            }
         Box(modifier.fillMaxSize().testTag("screen_schedule")) {
-            Timetable(
-                days = days,
-                items = items,
-                onItemClick = { id -> ui.events.firstOrNull { it.id == id }?.let { dialog = ScheduleDialog.Edit(it) } },
-                modifier = Modifier.fillMaxSize(),
-            )
+            Column(Modifier.fillMaxSize()) {
+                WeekNavigator(
+                    weekStart = weekStart,
+                    onPrevious = { weekStart -= 7 },
+                    onNext = { weekStart += 7 },
+                    onToday = { weekStart = currentWeekStart() },
+                )
+                Timetable(
+                    days = days,
+                    items = items,
+                    onItemClick = { id -> ui.events.firstOrNull { it.id == id }?.let { dialog = ScheduleDialog.Edit(it) } },
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                )
+            }
             AddButton({ dialog = ScheduleDialog.Edit(null) }, Modifier.align(Alignment.BottomEnd))
         }
     }

@@ -10,8 +10,8 @@ enum class ExamKind { MIDTERM, FINAL }
 
 enum class Priority { LOW, MEDIUM, HIGH }
 
-enum class NotificationOwnerType { EXAM, STUDY_EVENT, ASSIGNMENT }
+enum class NotificationOwnerType { EXAM, STUDY_EVENT, ASSIGNMENT, SESSION }
 
-enum class NotificationKind { ADVANCE_48H, ADVANCE_10M, AT_TIME }
+enum class NotificationKind { ADVANCE_48H, ADVANCE_10M, AT_TIME, OVERDUE, TIMER_END }
 
 enum class NotificationStatus { SCHEDULED, FIRED, CANCELLED, BLOCKED_NO_PERMISSION }

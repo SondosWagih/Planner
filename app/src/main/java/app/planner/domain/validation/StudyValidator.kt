@@ -20,6 +20,7 @@ object StudyValidator {
     fun studyEvent(d: StudyEventDraft): ValidationError? = when {
         d.courseId == null -> ValidationError.COURSE_REQUIRED
         d.days.isEmpty() || d.days.any { it !in 1..7 } -> ValidationError.DAY_INVALID
+        d.repeatEveryWeeks !in 1..2 -> ValidationError.DAY_INVALID
         !minuteOk(d.startMinute) || !minuteOk(d.endMinute) -> ValidationError.TIME_INVALID
         d.endMinute <= d.startMinute -> ValidationError.END_BEFORE_START
         else -> null

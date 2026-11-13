@@ -16,6 +16,11 @@ data class StudyEventDraft(
     val id: Long? = null, val courseId: Long?, val type: StudyEventType, val attendance: AttendanceFormat,
     val days: Set<Int>, val startMinute: Int, val endMinute: Int,
     val location: String? = null, val onlineLink: String? = null, val notes: String? = null,
+    /** 1 = every week, 2 = alternating (every second week). */
+    val repeatEveryWeeks: Int = 1,
+    /** For alternating classes: does the first occurrence fall in the current week (true) or the next one (false)? */
+    val startsThisWeek: Boolean = true,
+    val topic: String? = null,
 )
 
 /** A blank title means "use <exam type> <course name>" (computed when shown). */

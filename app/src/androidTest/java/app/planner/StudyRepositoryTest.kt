@@ -7,6 +7,8 @@ import app.planner.data.local.db.AppDatabase
 import app.planner.data.local.entity.*
 import app.planner.data.repository.StudyRepository
 import app.planner.domain.model.*
+import app.planner.domain.schedule.WeekMath
+import java.time.ZoneId
 import app.planner.domain.validation.ValidationError
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -123,5 +125,63 @@ class StudyRepositoryTest {
         repo.setAssignmentCompleted(id, false)
         assertFalse(repo.assignments.first().single().completed)
         assertNull(repo.assignments.first().single().completedAt)
+    }
+
+    private val fixedNow = 1_700_000_000_000L
+    private fun thisWeek() = WeekMath.weekStartOf(WeekMath.epochDayOf(fixedNow, ZoneId.systemDefault()))
+
+    @Test fun alternatingClassStartingThisWeekOccursEverySecondWeek() = runBlocking {
+        val cid = newCourse()
+        assertNull(repo.saveEvent(event(cid).copy(repeatEveryWeeks = 2, startsThisWeek = true, topic = "Electric")))
+        val e = repo.events.first().single()
+        assertEquals("Electric", e.topic)
+        assertEquals(thisWeek(), e.anchorWeekStart)
+        assertTrue(WeekMath.occursInWeek(e.repeatEveryWeeks, e.anchorWeekStart, thisWeek()))
+        assertFalse(WeekMath.occursInWeek(e.repeatEveryWeeks, e.anchorWeekStart, thisWeek() + 7))
+        assertTrue(WeekMath.occursInWeek(e.repeatEveryWeeks, e.anchorWeekStart, thisWeek() + 14))
+    }
+
+    @Test fun alternatingClassStartingNextWeekSkipsThisWeek() = runBlocking {
+        val cid = newCourse()
+        assertNull(repo.saveEvent(event(cid).copy(repeatEveryWeeks = 2, startsThisWeek = false)))
+        val e = repo.events.first().single()
+        assertFalse(WeekMath.occursInWeek(e.repeatEveryWeeks, e.anchorWeekStart, thisWeek()))
+        assertTrue(WeekMath.occursInWeek(e.repeatEveryWeeks, e.anchorWeekStart, thisWeek() + 7))
+        assertFalse(WeekMath.occursInWeek(e.repeatEveryWeeks, e.anchorWeekStart, thisWeek() + 14))
+        assertTrue(WeekMath.occursInWeek(e.repeatEveryWeeks, e.anchorWeekStart, thisWeek() + 21))
+    }
+
+    @Test fun physicalWeekAndOnlineWeekAreTwoClassesThatNeverOverlapInTime() = runBlocking {
+        val cid = newCourse("Techniques")
+        // physical on Saturday this week, online on Tuesday next week, then they alternate
+        repo.saveEvent(event(cid, type = StudyEventType.SECTION, attendance = AttendanceFormat.PHYSICAL, days = setOf(6))
+            .copy(repeatEveryWeeks = 2, startsThisWeek = true))
+        repo.saveEvent(event(cid, type = StudyEventType.SECTION, attendance = AttendanceFormat.ONLINE, days = setOf(2))
+            .copy(repeatEveryWeeks = 2, startsThisWeek = false))
+        val rows = repo.events.first()
+        val physical = rows.first { it.attendance == AttendanceFormat.PHYSICAL }
+        val online = rows.first { it.attendance == AttendanceFormat.ONLINE }
+        for (week in 0..7) {
+            val ws = thisWeek() + 7L * week
+            val p = WeekMath.occursInWeek(physical.repeatEveryWeeks, physical.anchorWeekStart, ws)
+            val o = WeekMath.occursInWeek(online.repeatEveryWeeks, online.anchorWeekStart, ws)
+            assertTrue("week $week: exactly one of them", p != o)
+        }
+    }
+
+    @Test fun everyChangeAsksForTheRemindersToBeReplanned() = runBlocking {
+        var calls = 0
+        val watched = StudyRepository(db, onChanged = { calls++ }, now = { fixedNow })
+        assertNull(watched.saveCourse(CourseDraft(name = "Physics", colorArgb = 1)))
+        val cid = watched.courses.first().single().id
+        val afterCourse = calls
+        assertNull(watched.saveEvent(event(cid)))
+        assertTrue(calls > afterCourse)
+        val afterEvent = calls
+        watched.deleteEvent(watched.events.first().single().id)
+        assertTrue(calls > afterEvent)
+        val afterDelete = calls
+        assertEquals(ValidationError.COURSE_REQUIRED, watched.saveEvent(event(999)))
+        assertEquals("invalid input must not trigger a re-plan", afterDelete, calls)
     }
 }

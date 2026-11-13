@@ -1,10 +1,14 @@
 package app.planner.ui.study
 
+import androidx.annotation.StringRes
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.res.stringResource
 import app.planner.R
 import app.planner.data.local.entity.*
 import app.planner.domain.model.*
+import app.planner.domain.schedule.WeekMath
 import app.planner.domain.validation.ValidationError
 
 typealias SaveHandler<D> = (D, (ValidationError?) -> Unit) -> Unit
@@ -26,6 +30,15 @@ fun CourseForm(initial: CourseEntity?, onDismiss: () -> Unit, onSave: SaveHandle
     }
 }
 
+private enum class RepeatPattern { EVERY_WEEK, THIS_WEEK, NEXT_WEEK }
+
+@StringRes
+private fun RepeatPattern.label() = when (this) {
+    RepeatPattern.EVERY_WEEK -> R.string.pattern_every_week
+    RepeatPattern.THIS_WEEK -> R.string.pattern_this_week
+    RepeatPattern.NEXT_WEEK -> R.string.pattern_next_week
+}
+
 @Composable
 fun EventForm(
     initial: StudyEventEntity?,
@@ -34,24 +47,45 @@ fun EventForm(
     onSave: SaveHandler<StudyEventDraft>,
     onDelete: (() -> Unit)? = null,
 ) {
+    val initialPattern = when {
+        initial == null || initial.repeatEveryWeeks <= 1 -> RepeatPattern.EVERY_WEEK
+        WeekMath.occursInWeek(initial.repeatEveryWeeks, initial.anchorWeekStart, currentWeekStart()) -> RepeatPattern.THIS_WEEK
+        else -> RepeatPattern.NEXT_WEEK
+    }
     var courseId by remember { mutableStateOf(initial?.courseId ?: courses.firstOrNull()?.id) }
     var type by remember { mutableStateOf(initial?.type ?: StudyEventType.LECTURE) }
     var attendance by remember { mutableStateOf(initial?.attendance ?: AttendanceFormat.PHYSICAL) }
+    var pattern by remember { mutableStateOf(initialPattern) }
     var days by remember { mutableStateOf(initial?.let { setOf(it.dayOfWeek) } ?: emptySet<Int>()) }
     var start by remember { mutableIntStateOf(initial?.startMinute ?: DEFAULT_CLASS_START_MINUTE) }
     var end by remember { mutableIntStateOf(initial?.endMinute ?: DEFAULT_CLASS_END_MINUTE) }
     var location by remember { mutableStateOf(initial?.location ?: "") }
     var link by remember { mutableStateOf(initial?.onlineLink ?: "") }
+    var topic by remember { mutableStateOf(initial?.topic ?: "") }
     var notes by remember { mutableStateOf(initial?.notes ?: "") }
     var error by remember { mutableStateOf<ValidationError?>(null) }
     FormDialog(stringResource(R.string.form_class), error, onDismiss, onSave = {
-        onSave(StudyEventDraft(initial?.id, courseId, type, attendance, days, start, end, location, link, notes)) { e ->
-            if (e == null) onDismiss() else error = e
-        }
+        onSave(
+            StudyEventDraft(
+                id = initial?.id, courseId = courseId, type = type, attendance = attendance, days = days,
+                startMinute = start, endMinute = end, location = location, onlineLink = link, notes = notes,
+                repeatEveryWeeks = if (pattern == RepeatPattern.EVERY_WEEK) 1 else 2,
+                startsThisWeek = pattern != RepeatPattern.NEXT_WEEK,
+                topic = topic,
+            )
+        ) { e -> if (e == null) onDismiss() else error = e }
     }, onDelete = onDelete) {
         CourseChoice(courses, courseId, allowNone = false) { courseId = it }
         ChoiceRow(stringResource(R.string.field_type), StudyEventType.entries.toList(), type, { type = it }) { stringResource(it.label()) }
         ChoiceRow(stringResource(R.string.field_attendance), AttendanceFormat.entries.toList(), attendance, { attendance = it }) { stringResource(it.label()) }
+        ChoiceRow(stringResource(R.string.field_repeat), RepeatPattern.entries.toList(), pattern, { pattern = it }) { stringResource(it.label()) }
+        if (pattern != RepeatPattern.EVERY_WEEK) {
+            Text(
+                stringResource(R.string.pattern_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         MultiChoiceFlow(
             label = stringResource(R.string.field_days),
             hint = stringResource(R.string.days_hint),
@@ -64,6 +98,7 @@ fun EventForm(
         TimeField(stringResource(R.string.field_end), end, { end = it })
         TextInput(stringResource(R.string.field_location), location) { location = it }
         TextInput(stringResource(R.string.field_link), link) { link = it }
+        TextInput(stringResource(R.string.field_topic), topic, placeholder = stringResource(R.string.field_topic_hint)) { topic = it }
         TextInput(stringResource(R.string.field_notes), notes, singleLine = false) { notes = it }
     }
 }

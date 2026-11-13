@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -32,13 +33,17 @@ import app.planner.domain.model.ThemeMode
 }
 
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel, modifier: Modifier = Modifier) {
+fun SettingsScreen(viewModel: SettingsViewModel, notifications: NotificationsViewModel, modifier: Modifier = Modifier) {
     val mode by viewModel.themeMode.collectAsStateWithLifecycle()
     var language by remember { mutableStateOf(AppLanguage.current()) }
 
     Column(
         modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp).testTag("screen_settings")
     ) {
+        NotificationSettingsSection(notifications)
+        Spacer(Modifier.height(16.dp))
+        HorizontalDivider()
+        Spacer(Modifier.height(16.dp))
         Header(R.string.theme)
         ThemeMode.entries.forEach { m ->
             RadioRow(stringResource(m.label()), selected = mode == m) { viewModel.setThemeMode(m) }
@@ -51,6 +56,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, modifier: Modifier = Modifier) 
                 AppLanguage.apply(l)
             }
         }
+        Spacer(Modifier.height(24.dp))
     }
 }
 

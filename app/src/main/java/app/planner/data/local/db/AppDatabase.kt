@@ -15,7 +15,7 @@ import app.planner.data.local.entity.*
         ExamEntity::class, AssignmentEntity::class,
         NotificationRecordEntity::class, AppSettingEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -36,7 +36,16 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2)
+        /** v3: alternating classes (every 2nd week) and an optional topic label. */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE study_events ADD COLUMN repeatEveryWeeks INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE study_events ADD COLUMN anchorWeekStart INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE study_events ADD COLUMN topic TEXT")
+            }
+        }
+
+        val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
 
         fun build(context: Context): AppDatabase =
             Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "planner.db")

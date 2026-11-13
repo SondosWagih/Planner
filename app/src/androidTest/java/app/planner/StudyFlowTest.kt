@@ -58,4 +58,24 @@ class StudyFlowTest {
         rule.waitUntil(5_000) { rule.onAllNodesWithText(name).fetchSemanticsNodes().size == 2 }
         rule.onAllNodesWithTag("timetable_card").assertCountEquals(2)
     }
+
+    @Test fun alternatingClassStartingNextWeekAppearsOnlyInNextWeeksTimetable() {
+        val name = "Course ${System.nanoTime()}"
+        addCourse(name)
+
+        openTab(R.string.tab_schedule)
+        rule.waitUntil(5_000) { rule.onAllNodesWithContentDescription(str(R.string.add)).fetchSemanticsNodes().isNotEmpty() }
+        rule.onNodeWithContentDescription(str(R.string.add)).performClick()
+        rule.onNodeWithText(name).performClick()
+        rule.onNodeWithText(str(R.string.pattern_next_week)).performScrollTo().performClick()
+        rule.onNodeWithText(dayName(DayOfWeek.MONDAY)).performScrollTo().performClick()
+        rule.onNodeWithText(str(R.string.save)).performClick()
+        waitForDialogToClose()
+
+        // not in this week ...
+        rule.onNodeWithContentDescription(str(R.string.next_week)).performClick()
+        rule.waitUntil(5_000) { rule.onAllNodesWithText(name).fetchSemanticsNodes().size == 1 }     // ... but next week
+        rule.onNodeWithContentDescription(str(R.string.previous_week)).performClick()
+        rule.waitUntil(5_000) { rule.onAllNodesWithText(name).fetchSemanticsNodes().isEmpty() }
+    }
 }

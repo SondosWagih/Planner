@@ -5,11 +5,10 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import app.planner.data.local.entity.StudySessionEntity
-import app.planner.data.local.entity.totalSeconds
-import app.planner.data.repository.StudyRepository
 import app.planner.data.timer.TimerSnapshot
 import app.planner.data.timer.TimerStatus
 import app.planner.data.timer.TimerStore
+import app.planner.notifications.TimerController
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -30,7 +29,7 @@ data class TimerUiState(
     val totalSeconds: Long get() = snapshot.totalMs / 1000
 }
 
-class TimerViewModel(private val store: TimerStore, private val repo: StudyRepository) : ViewModel() {
+class TimerViewModel(store: TimerStore, private val controller: TimerController) : ViewModel() {
     private val ticker = flow {
         while (true) {
             emit(System.currentTimeMillis())
@@ -44,43 +43,38 @@ class TimerViewModel(private val store: TimerStore, private val repo: StudyRepos
     }.stateIn(viewModelScope, SharingStarted.Eagerly, TimerUiState())
 
     private val _finishedSessionId = MutableStateFlow<Long?>(null)
-    /** Set when a timer reaches zero; the UI shows "session complete" until dismissed. */
+    /** Set when a timer reaches zero while the app is open; the UI shows "session complete" until dismissed. */
     val finishedSessionId: StateFlow<Long?> = _finishedSessionId
 
     private var finishing = false
 
     init {
-        // A timer that ended while the app was closed is detected here on the next launch.
         viewModelScope.launch {
-            state.collect { s -> if (s.expired) finish(s.snapshot.sessionId) }
+            state.collect { s -> if (s.expired) finish() }
         }
     }
 
-    private fun finish(sessionId: Long?) {
-        if (finishing || sessionId == null) return
+    private fun finish() {
+        if (finishing) return
         finishing = true
         viewModelScope.launch {
             try {
-                repo.setSessionCompleted(sessionId, true)
-                store.clear()
-                _finishedSessionId.value = sessionId
+                controller.completeIfExpired()?.let { _finishedSessionId.value = it }
             } finally {
                 finishing = false
             }
         }
     }
 
-    fun start(session: StudySessionEntity) {
-        if (state.value.active) return
-        viewModelScope.launch { store.start(session.id, session.totalSeconds * 1000L) }
-    }
-
-    fun pause() { viewModelScope.launch { store.pause() } }
-    fun resume() { viewModelScope.launch { store.resume() } }
-    fun stop() { viewModelScope.launch { store.clear() } }
+    // Everything goes through the controller so the notification and the end alarm always match.
+    fun start(session: StudySessionEntity) { viewModelScope.launch { controller.start(session) } }
+    fun pause() { viewModelScope.launch { controller.pause() } }
+    fun resume() { viewModelScope.launch { controller.resume() } }
+    fun stop() { viewModelScope.launch { controller.stop() } }
     fun dismissFinished() { _finishedSessionId.value = null }
 
     companion object {
-        fun factory(store: TimerStore, repo: StudyRepository) = viewModelFactory { initializer { TimerViewModel(store, repo) } }
+        fun factory(store: TimerStore, controller: TimerController) =
+            viewModelFactory { initializer { TimerViewModel(store, controller) } }
     }
 }

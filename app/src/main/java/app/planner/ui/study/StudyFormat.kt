@@ -52,11 +52,11 @@ import java.util.Locale
 }
 
 /** 12-hour time without leading zeros: "8 AM", "5 PM", "8:30 AM" in English and "8 ص", "5 م", "8:30 ص" in Arabic. */
-fun formatMinute(minute: Int): String {
+fun formatMinute(minute: Int, locale: Locale = Locale.getDefault()): String {
     val total = ((minute % 1440) + 1440) % 1440
     val h24 = total / 60
     val m = total % 60
-    val arabic = Locale.getDefault().language == "ar"
+    val arabic = locale.language == "ar"
     val suffix = if (h24 < 12) (if (arabic) "ص" else "AM") else (if (arabic) "م" else "PM")
     val h12 = if (h24 % 12 == 0) 12 else h24 % 12
     return if (m == 0) "$h12 $suffix" else "$h12:${m.toString().padStart(2, '0')} $suffix"

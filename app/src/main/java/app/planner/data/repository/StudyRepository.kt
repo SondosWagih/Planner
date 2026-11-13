@@ -4,6 +4,7 @@ import androidx.room.withTransaction
 import app.planner.data.local.db.AppDatabase
 import app.planner.data.local.entity.*
 import app.planner.domain.model.*
+import app.planner.domain.schedule.WeekMath
 import app.planner.domain.validation.StudyValidator
 import app.planner.domain.validation.ValidationError
 import java.time.Instant
@@ -17,6 +18,8 @@ import kotlinx.coroutines.flow.Flow
  */
 class StudyRepository(
     private val db: AppDatabase,
+    /** Called after every change that can affect reminders (alarms are re-planned there). */
+    private val onChanged: () -> Unit = {},
     private val now: () -> Long = { System.currentTimeMillis() },
 ) {
     val courses: Flow<List<CourseEntity>> = db.courseDao().observeActive()
@@ -46,6 +49,7 @@ class StudyRepository(
             db.courseDao().update(old.copy(name = d.name.trim(), code = d.code.clean(),
                 instructor = d.instructor.clean(), colorArgb = d.colorArgb, updatedAt = t))
         }
+        onChanged()
         return null
     }
 
@@ -59,6 +63,9 @@ class StudyRepository(
         if (!courseExists(courseId)) return ValidationError.COURSE_REQUIRED
         val days = d.days.toSortedSet().toList()
         val t = now()
+        val repeat = d.repeatEveryWeeks
+        val thisWeek = WeekMath.weekStartOf(WeekMath.epochDayOf(t, ZoneId.systemDefault()))
+        val anchor = if (repeat > 1) thisWeek + (if (d.startsThisWeek) 0L else 7L) else 0L
         val id = d.id
         val old = if (id == null) null
         else (db.studyEventDao().get(id)?.takeIf { it.deletedAt == null } ?: return ValidationError.NOT_FOUND)
@@ -67,6 +74,7 @@ class StudyRepository(
             courseId = courseId, type = d.type, attendance = d.attendance, dayOfWeek = day,
             startMinute = d.startMinute, endMinute = d.endMinute,
             location = d.location.clean(), onlineLink = d.onlineLink.clean(), notes = d.notes.clean(),
+            repeatEveryWeeks = repeat, anchorWeekStart = anchor, topic = d.topic.clean(),
             createdAt = t, updatedAt = t,
         )
 
@@ -79,11 +87,13 @@ class StudyRepository(
                 db.studyEventDao().update(old.copy(
                     courseId = fresh.courseId, type = fresh.type, attendance = fresh.attendance, dayOfWeek = keep,
                     startMinute = fresh.startMinute, endMinute = fresh.endMinute, location = fresh.location,
-                    onlineLink = fresh.onlineLink, notes = fresh.notes, updatedAt = t,
+                    onlineLink = fresh.onlineLink, notes = fresh.notes, repeatEveryWeeks = fresh.repeatEveryWeeks,
+                    anchorWeekStart = fresh.anchorWeekStart, topic = fresh.topic, updatedAt = t,
                 ))
                 days.filter { it != keep }.forEach { db.studyEventDao().insert(row(it)) }
             }
         }
+        onChanged()
         return null
     }
 
@@ -105,6 +115,7 @@ class StudyRepository(
                 dateEpochDay = d.dateEpochDay, startMinute = d.startMinute, durationMinutes = d.durationMinutes,
                 location = d.location.clean(), notes = d.notes.clean(), updatedAt = t))
         }
+        onChanged()
         return null
     }
 
@@ -126,6 +137,7 @@ class StudyRepository(
                 description = d.description.clean(), dueEpochDay = d.dueEpochDay, dueMinute = d.dueMinute,
                 priority = d.priority, updatedAt = t))
         }
+        onChanged()
         return null
     }
 
@@ -148,22 +160,31 @@ class StudyRepository(
             db.studySessionDao().update(old.copy(courseId = d.courseId, title = d.title.trim(),
                 durationMinutes = minutes, extraSeconds = seconds, notes = d.notes.clean(), updatedAt = t))
         }
+        onChanged()
         return null
     }
 
     suspend fun setAssignmentCompleted(id: Long, done: Boolean) {
         val t = now()
         db.assignmentDao().setCompleted(id, done, if (done) t else null, t)
+        onChanged()
     }
 
     suspend fun setSessionCompleted(id: Long, done: Boolean) {
         db.studySessionDao().setCompleted(id, done, now())
     }
 
-    suspend fun deleteEvent(id: Long) = db.studyEventDao().softDelete(id, now())
-    suspend fun deleteExam(id: Long) = db.examDao().softDelete(id, now())
-    suspend fun deleteAssignment(id: Long) = db.assignmentDao().softDelete(id, now())
-    suspend fun deleteSession(id: Long) = db.studySessionDao().softDelete(id, now())
+    suspend fun deleteEvent(id: Long) { db.studyEventDao().softDelete(id, now()); onChanged() }
+    suspend fun deleteExam(id: Long) { db.examDao().softDelete(id, now()); onChanged() }
+    suspend fun deleteAssignment(id: Long) { db.assignmentDao().softDelete(id, now()); onChanged() }
+    suspend fun deleteSession(id: Long) { db.studySessionDao().softDelete(id, now()) }
+
+    /** Title shown for a session (its own title, else its course name), or null if it no longer exists. */
+    suspend fun sessionTitle(id: Long, fallback: String): String? {
+        val s = db.studySessionDao().get(id)?.takeIf { it.deletedAt == null } ?: return null
+        if (s.title.isNotBlank()) return s.title
+        return s.courseId?.let { db.courseDao().get(it)?.name } ?: fallback
+    }
 
     /** Atomic: either the course and everything under it is hidden, or nothing is. */
     suspend fun deleteCourse(id: Long) {
@@ -175,5 +196,6 @@ class StudyRepository(
             db.studySessionDao().softDeleteByCourse(id, t)
             db.courseDao().softDelete(id, t)
         }
+        onChanged()
     }
 }

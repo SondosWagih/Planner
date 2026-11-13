@@ -30,6 +30,9 @@ interface StudyEventDao : BaseDao<StudyEventEntity> {
     @Query("SELECT * FROM study_events WHERE deletedAt IS NULL ORDER BY dayOfWeek, startMinute")
     fun observeActive(): Flow<List<StudyEventEntity>>
 
+    @Query("SELECT * FROM study_events WHERE deletedAt IS NULL")
+    suspend fun getActive(): List<StudyEventEntity>
+
     @Query("SELECT * FROM study_events WHERE id = :id")
     suspend fun get(id: Long): StudyEventEntity?
 
@@ -63,6 +66,9 @@ interface ExamDao : BaseDao<ExamEntity> {
     @Query("SELECT * FROM exams WHERE deletedAt IS NULL ORDER BY dateEpochDay, startMinute")
     fun observeAll(): Flow<List<ExamEntity>>
 
+    @Query("SELECT * FROM exams WHERE deletedAt IS NULL")
+    suspend fun getActive(): List<ExamEntity>
+
     @Query("SELECT * FROM exams WHERE id = :id")
     suspend fun get(id: Long): ExamEntity?
 
@@ -77,6 +83,9 @@ interface ExamDao : BaseDao<ExamEntity> {
 interface AssignmentDao : BaseDao<AssignmentEntity> {
     @Query("SELECT * FROM assignments WHERE deletedAt IS NULL ORDER BY completed, dueEpochDay, dueMinute")
     fun observeAll(): Flow<List<AssignmentEntity>>
+
+    @Query("SELECT * FROM assignments WHERE deletedAt IS NULL AND completed = 0")
+    suspend fun getIncomplete(): List<AssignmentEntity>
 
     @Query("SELECT * FROM assignments WHERE id = :id")
     suspend fun get(id: Long): AssignmentEntity?
@@ -101,6 +110,18 @@ interface NotificationRecordDao {
 
     @Query("SELECT * FROM notification_records WHERE status = 'SCHEDULED'")
     suspend fun allScheduled(): List<NotificationRecordEntity>
+
+    @Query("SELECT * FROM notification_records WHERE status IN ('SCHEDULED', 'BLOCKED_NO_PERMISSION') ORDER BY triggerAtMillis")
+    suspend fun allActive(): List<NotificationRecordEntity>
+
+    @Query("SELECT * FROM notification_records WHERE status IN ('SCHEDULED', 'BLOCKED_NO_PERMISSION') ORDER BY triggerAtMillis")
+    fun observeActive(): Flow<List<NotificationRecordEntity>>
+
+    @Query("SELECT * FROM notification_records")
+    suspend fun all(): List<NotificationRecordEntity>
+
+    @Query("UPDATE notification_records SET status = :status, firedAt = :now, updatedAt = :now WHERE requestCode = :requestCode")
+    suspend fun markFired(requestCode: Int, status: NotificationStatus, now: Long)
 
     @Query("UPDATE notification_records SET status = :status, updatedAt = :now WHERE id = :id")
     suspend fun setStatus(id: Long, status: NotificationStatus, now: Long)

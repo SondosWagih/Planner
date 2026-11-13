@@ -16,7 +16,7 @@ class NavigationTest {
     @Test fun allFiveStudyDestinationsAreReachable() {
         assertEquals(5, StudyDestination.entries.size)
         StudyDestination.entries.forEach { dest ->
-            rule.onNode(hasText(rule.activity.getString(dest.label)) and hasClickAction()).performClick()
+            rule.onNode(hasText(rule.activity.getString(dest.navLabel)) and hasClickAction()).performClick()
             rule.onNodeWithTag(dest.testTag).assertIsDisplayed()
         }
     }

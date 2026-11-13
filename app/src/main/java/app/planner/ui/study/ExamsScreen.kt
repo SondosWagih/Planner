@@ -94,22 +94,3 @@ fun ExamsScreen(viewModel: StudyViewModel, modifier: Modifier = Modifier) {
         DeleteDialog(R.string.delete_item_msg, onConfirm = { viewModel.deleteExam(x.id) }, onDismiss = { deleting = null })
     }
 }
-
-@Composable
-private fun WeekNavigator(weekStart: Long, onPrevious: () -> Unit, onNext: () -> Unit, onToday: () -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onPrevious) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = stringResource(R.string.previous_week))
-        }
-        Text(
-            formatWeekRange(weekStart),
-            style = MaterialTheme.typography.titleMedium,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.weight(1f),
-        )
-        TextButton(onClick = onToday) { Text(stringResource(R.string.today)) }
-        IconButton(onClick = onNext) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = stringResource(R.string.next_week))
-        }
-    }
-}
