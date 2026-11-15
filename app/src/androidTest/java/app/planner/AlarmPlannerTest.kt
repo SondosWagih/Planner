@@ -140,4 +140,29 @@ class AlarmPlannerTest {
         assertEquals("no two alarms may share a request code", codes.size, codes.toSet().size)
         assertEquals("the same data must give the same codes", codes, plan().map { it.requestCode })
     }
+
+    @Test fun onlyTheExamItselfAndTheTimerUseTheAlarmClock() {
+        val running = TimerSnapshot(sessionId = 5, status = TimerStatus.RUNNING, totalMs = 60_000, endAtMs = at(2026, 11, 14, 10))
+        val plan = AlarmPlanner.plan(
+            events = listOf(event(1, 6)),
+            exams = listOf(exam(1, 20, 540)),
+            incompleteAssignments = listOf(assignment(1, day(2026, 11, 10))),
+            timer = running, nowMillis = at(2026, 11, 14, 6), zone = utc,
+        )
+        assertEquals(1 + 3 + 1 + 1, plan.size)
+        fun high(type: NotificationOwnerType, kind: NotificationKind) = plan.first { it.ownerType == type && it.kind == kind }.highPriority
+        assertTrue(high(NotificationOwnerType.EXAM, NotificationKind.AT_TIME))
+        assertTrue(high(NotificationOwnerType.SESSION, NotificationKind.TIMER_END))
+        assertFalse(high(NotificationOwnerType.EXAM, NotificationKind.ADVANCE_10M))
+        assertFalse(high(NotificationOwnerType.STUDY_EVENT, NotificationKind.AT_TIME))
+        assertFalse(high(NotificationOwnerType.ASSIGNMENT, NotificationKind.OVERDUE))
+    }
+
+    @Test fun aClassThatStartsAtElevenPmOnFridayRemindsAtElevenPmOnFriday() {
+        // Friday 20 November 2026, 23:00 (ISO weekday 5); it ends at 1 AM on Saturday, but the reminder is at the start.
+        val e = event(1, dow = 5, start = 23 * 60).copy(endMinute = 60, endDayOffset = 1)
+        val (trigger, d) = AlarmPlanner.nextClassOccurrence(e, at(2026, 11, 14, 6), utc)!!
+        assertEquals(at(2026, 11, 20, 23), trigger)
+        assertEquals(day(2026, 11, 20), d)
+    }
 }

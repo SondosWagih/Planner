@@ -1,6 +1,7 @@
 package app.planner.notifications
 
 import app.planner.data.local.db.AppDatabase
+import app.planner.data.local.entity.AppSettingEntity
 import app.planner.data.local.entity.CourseEntity
 import app.planner.data.local.entity.NotificationKind
 import app.planner.data.local.entity.NotificationOwnerType
@@ -20,6 +21,7 @@ class AlarmHandler(
 ) {
     suspend fun handle(type: NotificationOwnerType, id: Long, kind: NotificationKind, occurrenceKey: Long) {
         val code = AlarmPlanner.requestCode(type, id, kind)
+        recordDelivery(code)
         when (type) {
             NotificationOwnerType.STUDY_EVENT -> {
                 val event = db.studyEventDao().get(id)?.takeIf { it.deletedAt == null }
@@ -36,6 +38,14 @@ class AlarmHandler(
         scheduler.rescheduleAll()
     }
 
+    /** Remembers when the alert was due and when it really arrived, so Settings can show a late delivery. */
+    private suspend fun recordDelivery(code: Int) {
+        val arrived = now()
+        val due = db.notificationRecordDao().byRequestCode(code)?.triggerAtMillis ?: return
+        db.appSettingDao().put(AppSettingEntity(KEY_LAST_DUE, due.toString(), arrived))
+        db.appSettingDao().put(AppSettingEntity(KEY_LAST_ARRIVED, arrived.toString(), arrived))
+    }
+
     /** One summary of everything that is past its day and not ticked yet (nothing if there is none). */
     suspend fun showOverdueNow() {
         val today = WeekMath.epochDayOf(now(), zone())
@@ -49,5 +59,10 @@ class AlarmHandler(
             a to courses.getOrPut(a.courseId) { db.courseDao().get(a.courseId) }
         }
         notifier.showOverdue(items)
+    }
+
+    companion object {
+        const val KEY_LAST_DUE = "last_alert_due"
+        const val KEY_LAST_ARRIVED = "last_alert_arrived"
     }
 }

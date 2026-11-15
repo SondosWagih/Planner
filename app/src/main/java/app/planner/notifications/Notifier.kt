@@ -25,6 +25,7 @@ import app.planner.data.local.entity.ExamKind
 import app.planner.data.local.entity.NotificationKind
 import app.planner.data.local.entity.StudyEventEntity
 import app.planner.data.local.entity.StudyEventType
+import app.planner.ui.study.formatClassSpan
 import app.planner.ui.study.formatClock
 import app.planner.ui.study.formatMinute
 
@@ -100,7 +101,7 @@ class Notifier(private val context: Context) {
         val title = c.getString(if (event.type == StudyEventType.LECTURE) R.string.notif_lecture_now else R.string.notif_section_now)
         val attendance = c.getString(if (event.attendance == AttendanceFormat.ONLINE) R.string.attendance_online else R.string.attendance_physical)
         val body = listOfNotNull(course?.name, attendance, event.topic, event.location ?: event.onlineLink).joinToString(" • ")
-        val time = "${formatMinute(event.startMinute, locale)} – ${formatMinute(event.endMinute, locale)}"
+        val time = formatClassSpan(event.dayOfWeek, event.startMinute, event.endMinute, event.endDayOffset, locale)
         val n = builder(c, CH_CURRENT)
             .setContentTitle(title)
             .setContentText(body)

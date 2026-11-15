@@ -1,9 +1,12 @@
 package app.planner.ui.study
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import app.planner.R
 import app.planner.data.local.entity.*
@@ -59,6 +62,7 @@ fun EventForm(
     var days by remember { mutableStateOf(initial?.let { setOf(it.dayOfWeek) } ?: emptySet<Int>()) }
     var start by remember { mutableIntStateOf(initial?.startMinute ?: DEFAULT_CLASS_START_MINUTE) }
     var end by remember { mutableIntStateOf(initial?.endMinute ?: DEFAULT_CLASS_END_MINUTE) }
+    var endDayOffset by remember { mutableIntStateOf(initial?.endDayOffset ?: 0) }
     var location by remember { mutableStateOf(initial?.location ?: "") }
     var link by remember { mutableStateOf(initial?.onlineLink ?: "") }
     var topic by remember { mutableStateOf(initial?.topic ?: "") }
@@ -68,7 +72,7 @@ fun EventForm(
         onSave(
             StudyEventDraft(
                 id = initial?.id, courseId = courseId, type = type, attendance = attendance, days = days,
-                startMinute = start, endMinute = end, location = location, onlineLink = link, notes = notes,
+                startMinute = start, endMinute = end, endDayOffset = endDayOffset, location = location, onlineLink = link, notes = notes,
                 repeatEveryWeeks = if (pattern == RepeatPattern.EVERY_WEEK) 1 else 2,
                 startsThisWeek = pattern != RepeatPattern.NEXT_WEEK,
                 topic = topic,
@@ -94,8 +98,33 @@ fun EventForm(
             onToggle = { d -> days = if (d in days) days - d else days + d },
             optionLabel = { dayName(it) },
         )
-        TimeField(stringResource(R.string.field_start), start, { start = it })
-        TimeField(stringResource(R.string.field_end), end, { end = it })
+        TimeField(stringResource(R.string.field_start), start, { start = it; endDayOffset = if (end <= start) 1 else 0 })
+        TimeField(stringResource(R.string.field_end), end, { end = it; endDayOffset = if (end <= start) 1 else 0 })
+        ChoiceRow(stringResource(R.string.field_end_day), listOf(0, 1), endDayOffset, { endDayOffset = it }) {
+            stringResource(if (it == 0) R.string.end_same_day else R.string.end_next_day)
+        }
+        // Spell out exactly when each selected day starts and ends, with day names.
+        val orderedDays = weekDaysInOrder().filter { it in days }
+        if (orderedDays.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                orderedDays.forEach { d ->
+                    Text(
+                        formatClassSpan(d, start, end, endDayOffset, withDay = true),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                // 12 AM belongs to the day that STARTS at that moment (Saturday 12 AM is right after Friday night).
+                if (start < 60) {
+                    val first = orderedDays.first()
+                    Text(
+                        stringResource(R.string.midnight_hint, dayName(first), dayName((first + 5) % 7 + 1)),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
         TextInput(stringResource(R.string.field_location), location) { location = it }
         TextInput(stringResource(R.string.field_link), link) { link = it }
         TextInput(stringResource(R.string.field_topic), topic, placeholder = stringResource(R.string.field_topic_hint)) { topic = it }

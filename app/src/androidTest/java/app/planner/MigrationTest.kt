@@ -83,4 +83,37 @@ class MigrationTest {
         }
         helper.close()
     }
+
+    @Test fun migration3To4MarksExistingOvernightClassesAsEndingTheNextDay() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val config = SupportSQLiteOpenHelper.Configuration.builder(context)
+            .name(null)
+            .callback(object : SupportSQLiteOpenHelper.Callback(3) {
+                override fun onCreate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        "CREATE TABLE study_events (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, courseId INTEGER NOT NULL, " +
+                            "type TEXT NOT NULL, attendance TEXT NOT NULL, dayOfWeek INTEGER NOT NULL, startMinute INTEGER NOT NULL, " +
+                            "endMinute INTEGER NOT NULL, location TEXT, onlineLink TEXT, notes TEXT, " +
+                            "repeatEveryWeeks INTEGER NOT NULL DEFAULT 1, anchorWeekStart INTEGER NOT NULL DEFAULT 0, topic TEXT, " +
+                            "createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL, deletedAt INTEGER)"
+                    )
+                    db.execSQL("INSERT INTO study_events (courseId, type, attendance, dayOfWeek, startMinute, endMinute, createdAt, updatedAt) VALUES (1, 'LECTURE', 'PHYSICAL', 6, 480, 570, 1, 1)")
+                    db.execSQL("INSERT INTO study_events (courseId, type, attendance, dayOfWeek, startMinute, endMinute, createdAt, updatedAt) VALUES (1, 'LECTURE', 'PHYSICAL', 5, 1380, 60, 1, 1)")
+                }
+                override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+            })
+            .build()
+        val helper = FrameworkSQLiteOpenHelperFactory().create(config)
+        val db = helper.writableDatabase
+
+        AppDatabase.MIGRATION_3_4.migrate(db)
+
+        db.query("SELECT dayOfWeek, endDayOffset FROM study_events ORDER BY id").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals(6, c.getInt(0)); assertEquals("an ordinary class ends the same day", 0, c.getInt(1))
+            assertTrue(c.moveToNext())
+            assertEquals(5, c.getInt(0)); assertEquals("11 PM -> 1 AM ends the next day", 1, c.getInt(1))
+        }
+        helper.close()
+    }
 }

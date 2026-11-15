@@ -16,6 +16,8 @@ data class StudyEventDraft(
     val id: Long? = null, val courseId: Long?, val type: StudyEventType, val attendance: AttendanceFormat,
     val days: Set<Int>, val startMinute: Int, val endMinute: Int,
     val location: String? = null, val onlineLink: String? = null, val notes: String? = null,
+    /** 0 = ends the day it starts, 1 = ends the next day (e.g. Friday 11 PM -> Saturday 12:30 AM). */
+    val endDayOffset: Int = 0,
     /** 1 = every week, 2 = alternating (every second week). */
     val repeatEveryWeeks: Int = 1,
     /** For alternating classes: does the first occurrence fall in the current week (true) or the next one (false)? */

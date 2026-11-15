@@ -79,6 +79,22 @@ fun NotificationSettingsSection(viewModel: NotificationsViewModel, modifier: Mod
                 color = MaterialTheme.colorScheme.error,
             )
         }
+        val lastDue = diag.lastDueMillis
+        val lastArrived = diag.lastArrivedMillis
+        if (lastDue != null && lastArrived != null) {
+            Text(
+                stringResource(R.string.diag_last, formatTrigger(lastDue), formatTrigger(lastArrived)),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            val lateMinutes = (lastArrived - lastDue) / 60_000
+            if (lateMinutes >= 1) {
+                Text(
+                    stringResource(R.string.diag_late, lateMinutes.toInt()),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = { viewModel.rescheduleNow() }) { Text(stringResource(R.string.diag_reschedule)) }
             Button(onClick = { viewModel.sendTest() }) { Text(stringResource(R.string.diag_test)) }

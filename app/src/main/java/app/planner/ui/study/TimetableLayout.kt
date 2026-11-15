@@ -66,3 +66,9 @@ fun gridMinuteRange(items: List<TimetableItem>): Pair<Int, Int> {
     val lastNeeded = ((items.maxOfOrNull { it.endMinute } ?: GRID_DEFAULT_END) + GRID_STEP - 1) / GRID_STEP * GRID_STEP
     return first to minOf(1440, maxOf(GRID_DEFAULT_END, lastNeeded))
 }
+
+/** Where the grid should be scrolled to when it opens: 8 AM, or an earlier class starting between 5 and 8 AM. */
+fun initialScrollMinute(items: List<TimetableItem>): Int {
+    val early = items.map { it.startMinute }.filter { it in 5 * 60 until GRID_DEFAULT_START }.minOrNull()
+    return (early ?: GRID_DEFAULT_START) / GRID_STEP * GRID_STEP
+}

@@ -49,6 +49,8 @@ data class StudyEventEntity(
     val location: String? = null,
     val onlineLink: String? = null,
     val notes: String? = null,
+    /** 0 = the class ends on the same day it starts, 1 = it ends the next day (11 PM -> 12:30 AM). */
+    @ColumnInfo(defaultValue = "0") val endDayOffset: Int = 0,
     /** 1 = every week, 2 = every second week (an alternating schedule). */
     @ColumnInfo(defaultValue = "1") val repeatEveryWeeks: Int = 1,
     /** A Saturday that starts a week in which this class takes place (only used when repeatEveryWeeks > 1). */

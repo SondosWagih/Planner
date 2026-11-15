@@ -32,4 +32,9 @@ class WeekMathTest {
         assertFalse(WeekMath.occursInWeek(2, anchor, anchor - 7))
         assertTrue(WeekMath.occursInWeek(2, anchor, anchor - 14))
     }
+
+    @Test fun timetableColumnsRunSaturdayToFriday() {
+        // ISO: Mon = 1 ... Sat = 6, Sun = 7
+        assertEquals(listOf(0, 1, 2, 3, 4, 5, 6), listOf(6, 7, 1, 2, 3, 4, 5).map { WeekMath.dayIndex(it) })
+    }
 }

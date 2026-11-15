@@ -71,7 +71,7 @@
     <string name="error_course_required">اختر مقرراً</string>
     <string name="error_day_invalid">اختر يوماً واحداً على الأقل</string>
     <string name="error_time_invalid">وقت غير صالح</string>
-    <string name="error_end_before_start">يجب أن يكون وقت النهاية بعد وقت البداية</string>
+    <string name="error_end_before_start">يجب أن تنتهي الحصة بعد بدايتها. إذا انتهت بعد منتصف الليل فاجعل يوم النهاية اليوم التالي.</string>
     <string name="error_duration_invalid">يجب أن تكون المدة بين ثانية واحدة و24 ساعة</string>
     <string name="error_not_found">هذا العنصر لم يعد موجوداً</string>
     <string name="field_code_hint">مثال: CS101</string>
@@ -172,4 +172,10 @@
     <string name="pattern_hint">للمحاضرة المتبادلة، مثلاً فيزيكال أسبوع وأونلاين الأسبوع التالي، أضف حصة لكل أسبوع.</string>
     <string name="field_topic">الموضوع (اختياري)</string>
     <string name="field_topic_hint">مثال: كهرباء</string>
+    <string name="diag_last">آخر تنبيه: موعده %1$s ووصل %2$s</string>
+    <string name="diag_late">وصل متأخراً %d دقيقة. اسمح باستخدام البطارية بدون قيود (و التشغيل التلقائي في بعض الهواتف) ثم جرّب مرة أخرى.</string>
+    <string name="field_end_day">تنتهي في</string>
+    <string name="end_same_day">نفس اليوم</string>
+    <string name="end_next_day">اليوم التالي</string>
+    <string name="midnight_hint">الساعة 12 ص يوم %1$s هي بداية يوم %1$s تماماً، بعد ليلة %2$s مباشرة.</string>
 </resources>

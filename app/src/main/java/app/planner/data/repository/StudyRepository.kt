@@ -72,7 +72,7 @@ class StudyRepository(
 
         fun row(day: Int) = StudyEventEntity(
             courseId = courseId, type = d.type, attendance = d.attendance, dayOfWeek = day,
-            startMinute = d.startMinute, endMinute = d.endMinute,
+            startMinute = d.startMinute, endMinute = d.endMinute, endDayOffset = d.endDayOffset,
             location = d.location.clean(), onlineLink = d.onlineLink.clean(), notes = d.notes.clean(),
             repeatEveryWeeks = repeat, anchorWeekStart = anchor, topic = d.topic.clean(),
             createdAt = t, updatedAt = t,
@@ -86,7 +86,8 @@ class StudyRepository(
                 val fresh = row(keep)
                 db.studyEventDao().update(old.copy(
                     courseId = fresh.courseId, type = fresh.type, attendance = fresh.attendance, dayOfWeek = keep,
-                    startMinute = fresh.startMinute, endMinute = fresh.endMinute, location = fresh.location,
+                    startMinute = fresh.startMinute, endMinute = fresh.endMinute, endDayOffset = fresh.endDayOffset,
+                    location = fresh.location,
                     onlineLink = fresh.onlineLink, notes = fresh.notes, repeatEveryWeeks = fresh.repeatEveryWeeks,
                     anchorWeekStart = fresh.anchorWeekStart, topic = fresh.topic, updatedAt = t,
                 ))

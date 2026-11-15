@@ -184,4 +184,16 @@ class StudyRepositoryTest {
         assertEquals(ValidationError.COURSE_REQUIRED, watched.saveEvent(event(999)))
         assertEquals("invalid input must not trigger a re-plan", afterDelete, calls)
     }
+
+    @Test fun aClassFromElevenPmToOneAmIsAccepted() = runBlocking {
+        val cid = newCourse()
+        // Friday (ISO 5) 11 PM -> 1 AM
+        assertNull(repo.saveEvent(event(cid, days = setOf(5), start = 23 * 60, end = 60).copy(endDayOffset = 1)))
+        val e = repo.events.first().single()
+        assertEquals(23 * 60, e.startMinute)
+        assertEquals(60, e.endMinute)
+        assertEquals("it ends on Saturday, the next day", 1, e.endDayOffset)
+        // without saying the class ends the next day, 1 AM is just a mistake
+        assertEquals(ValidationError.END_BEFORE_START, repo.saveEvent(event(cid, days = setOf(5), start = 23 * 60, end = 60)))
+    }
 }

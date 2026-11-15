@@ -15,7 +15,7 @@ import app.planner.data.local.entity.*
         ExamEntity::class, AssignmentEntity::class,
         NotificationRecordEntity::class, AppSettingEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -45,7 +45,15 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
+        /** v4: classes name the day they end on. Rows that already ended "before" they started passed midnight. */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE study_events ADD COLUMN endDayOffset INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("UPDATE study_events SET endDayOffset = 1 WHERE endMinute <= startMinute")
+            }
+        }
+
+        val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
 
         fun build(context: Context): AppDatabase =
             Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "planner.db")

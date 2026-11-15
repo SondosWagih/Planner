@@ -120,6 +120,9 @@ interface NotificationRecordDao {
     @Query("SELECT * FROM notification_records")
     suspend fun all(): List<NotificationRecordEntity>
 
+    @Query("SELECT * FROM notification_records WHERE requestCode = :code")
+    suspend fun byRequestCode(code: Int): NotificationRecordEntity?
+
     @Query("UPDATE notification_records SET status = :status, firedAt = :now, updatedAt = :now WHERE requestCode = :requestCode")
     suspend fun markFired(requestCode: Int, status: NotificationStatus, now: Long)
 
@@ -131,6 +134,9 @@ interface NotificationRecordDao {
 interface AppSettingDao {
     @Query("SELECT value FROM app_settings WHERE `key` = :key")
     suspend fun get(key: String): String?
+
+    @Query("SELECT value FROM app_settings WHERE `key` = :key")
+    fun observe(key: String): Flow<String?>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun put(setting: AppSettingEntity)

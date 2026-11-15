@@ -37,7 +37,8 @@ open class AlarmScheduler(private val context: Context) {
     fun hasPendingAlarm(requestCode: Int): Boolean =
         PendingIntent.getBroadcast(context, requestCode, baseIntent(), PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE) != null
 
-    private fun baseIntent() = Intent(context, AlarmReceiver::class.java).setAction(ACTION_ALARM)
+    private fun baseIntent() =
+        Intent(context, AlarmReceiver::class.java).setAction(ACTION_ALARM)
 
     private fun pendingIntent(requestCode: Int, alarm: PlannedAlarm?): PendingIntent {
         val intent = baseIntent()

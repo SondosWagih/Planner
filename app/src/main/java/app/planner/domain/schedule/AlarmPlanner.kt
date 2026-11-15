@@ -18,7 +18,7 @@ data class PlannedAlarm(
     /** The day this alarm is for (recurring things), 0 otherwise. */
     val occurrenceKey: Long,
     val triggerAtMillis: Long,
-    /** Highest-priority alarm (setAlarmClock) instead of setExactAndAllowWhileIdle. */
+    /** Highest-priority alarm (setAlarmClock) instead of setExactAndAllowWhileIdle: the exam itself and the timer end. */
     val highPriority: Boolean,
 ) {
     val requestCode: Int get() = AlarmPlanner.requestCode(ownerType, ownerId, kind)

@@ -80,9 +80,33 @@ fun formatWeekRange(weekStartEpochDay: Long): String {
     return "${LocalDate.ofEpochDay(weekStartEpochDay).format(f)} – ${LocalDate.ofEpochDay(weekStartEpochDay + 6).format(f)}"
 }
 
-fun dayName(dayOfWeek: Int): String = DayOfWeek.of(dayOfWeek).getDisplayName(TextStyle.FULL, Locale.getDefault())
+fun dayName(dayOfWeek: Int, locale: Locale = Locale.getDefault()): String =
+    DayOfWeek.of(dayOfWeek).getDisplayName(TextStyle.FULL, locale)
 
-fun shortDayName(dayOfWeek: Int): String = DayOfWeek.of(dayOfWeek).getDisplayName(TextStyle.SHORT, Locale.getDefault())
+fun shortDayName(dayOfWeek: Int, locale: Locale = Locale.getDefault()): String =
+    DayOfWeek.of(dayOfWeek).getDisplayName(TextStyle.SHORT, locale)
+
+/**
+ * "8 AM – 9:30 AM" for an ordinary class. When the class ends on the next day both days are named:
+ * "Fri 11 PM – Sat 12:30 AM". With [withDay] the (full) day name is always shown: "Friday 8 AM – 9:30 AM".
+ */
+fun formatClassSpan(
+    dayOfWeek: Int,
+    startMinute: Int,
+    endMinute: Int,
+    endDayOffset: Int,
+    locale: Locale = Locale.getDefault(),
+    withDay: Boolean = false,
+): String {
+    val start = formatMinute(startMinute, locale)
+    val end = formatMinute(endMinute, locale)
+    fun name(d: Int) = if (withDay) dayName(d, locale) else shortDayName(d, locale)
+    return when {
+        endDayOffset > 0 -> "${name(dayOfWeek)} $start – ${name(DayOfWeek.of(dayOfWeek).plus(endDayOffset.toLong()).value)} $end"
+        withDay -> "${name(dayOfWeek)} $start – $end"
+        else -> "$start – $end"
+    }
+}
 
 fun todayEpochDay(): Long = LocalDate.now().toEpochDay()
 

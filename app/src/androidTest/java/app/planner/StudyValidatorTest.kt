@@ -51,4 +51,35 @@ class StudyValidatorTest {
         assertNull(StudyValidator.session(s(86_400)))
         assertEquals(DURATION_INVALID, StudyValidator.session(s(86_401)))
     }
+
+    private fun overnight(start: Int, end: Int, offset: Int) =
+        event(start = start, end = end).copy(endDayOffset = offset)
+
+    @Test fun aClassThatEndsTheNextDayNeedsAnEndBeforeItsStart() {
+        // Friday 11 PM -> Saturday 12:30 AM, 12 AM and 1 AM
+        assertNull(StudyValidator.studyEvent(overnight(23 * 60, 30, 1)))
+        assertNull(StudyValidator.studyEvent(overnight(23 * 60, 0, 1)))   // ends exactly at midnight
+        assertNull(StudyValidator.studyEvent(overnight(23 * 60, 60, 1)))
+        // "next day" with an end after the start would last more than 24 hours
+        assertEquals(END_BEFORE_START, StudyValidator.studyEvent(overnight(8 * 60, 9 * 60, 1)))
+        assertEquals(END_BEFORE_START, StudyValidator.studyEvent(overnight(23 * 60, 23 * 60, 1)))
+    }
+
+    @Test fun theSameDayStillNeedsAnEndAfterTheStart() {
+        // 11 PM -> 1 AM is only valid when the end day is the next day: no guessing
+        assertEquals(END_BEFORE_START, StudyValidator.studyEvent(overnight(23 * 60, 60, 0)))
+        assertEquals(END_BEFORE_START, StudyValidator.studyEvent(overnight(10 * 60, 9 * 60, 0)))
+    }
+
+    @Test fun onlyTheSameOrTheNextDayExist() {
+        assertEquals(TIME_INVALID, StudyValidator.studyEvent(overnight(23 * 60, 60, 2)))
+        assertEquals(TIME_INVALID, StudyValidator.studyEvent(overnight(23 * 60, 60, -1)))
+    }
+
+    @Test fun classLengthAcrossMidnight() {
+        assertEquals(120, StudyValidator.classMinutes(23 * 60, 60, 1))
+        assertEquals(60, StudyValidator.classMinutes(23 * 60, 0, 1))
+        assertEquals(90, StudyValidator.classMinutes(8 * 60, 9 * 60 + 30, 0))
+        assertEquals(0, StudyValidator.classMinutes(600, 540, 0))
+    }
 }

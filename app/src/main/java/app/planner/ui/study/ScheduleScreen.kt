@@ -18,7 +18,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.planner.R
 import app.planner.data.local.entity.AttendanceFormat
 import app.planner.data.local.entity.StudyEventEntity
-import app.planner.domain.schedule.WeekMath
+import app.planner.domain.schedule.ScheduleSlices
 import java.time.LocalDate
 
 private sealed interface ScheduleDialog {
@@ -37,7 +37,6 @@ fun ScheduleScreen(viewModel: StudyViewModel, modifier: Modifier = Modifier) {
         CenteredMessage("screen_schedule", stringResource(R.string.add_course_first))
     } else {
         val today = todayEpochDay()
-        val order = weekDaysInOrder()
         val days = (0..6).map { i ->
             val date = LocalDate.ofEpochDay(weekStart + i)
             TimetableDay(
@@ -47,27 +46,28 @@ fun ScheduleScreen(viewModel: StudyViewModel, modifier: Modifier = Modifier) {
                 highlight = date.toEpochDay() == today,
             )
         }
-        // Weekly classes show every week; alternating ones only in the weeks they belong to.
-        val items = ui.events
-            .filter { WeekMath.occursInWeek(it.repeatEveryWeeks, it.anchorWeekStart, weekStart) }
-            .map { e ->
-                val course = courseById[e.courseId]
-                TimetableItem(
-                    id = e.id,
-                    dayKey = order.indexOf(e.dayOfWeek),
-                    startMinute = e.startMinute,
-                    endMinute = e.endMinute,
-                    title = course?.name ?: "—",
-                    lines = listOfNotNull(
-                        "${formatMinute(e.startMinute)} – ${formatMinute(e.endMinute)}",
-                        "${stringResource(e.type.label())} • ${stringResource(e.attendance.label())}",
-                        e.topic,
-                        e.location,
-                    ),
-                    color = course?.let { Color(it.colorArgb) } ?: Color.Gray,
-                    icon = if (e.attendance == AttendanceFormat.ONLINE) Icons.Outlined.Videocam else Icons.Outlined.Place,
-                )
-            }
+        // Weekly classes show every week; alternating ones only in their weeks; one that passes midnight is drawn
+        // in two columns (evening piece + morning piece).
+        val eventById = ui.events.associateBy { it.id }
+        val items = ScheduleSlices.forWeek(ui.events, weekStart).mapNotNull { slice ->
+            val e = eventById[slice.eventId] ?: return@mapNotNull null
+            val course = courseById[e.courseId]
+            TimetableItem(
+                id = e.id,
+                dayKey = slice.dayIndex,
+                startMinute = slice.startMinute,
+                endMinute = slice.endMinute,
+                title = course?.name ?: "—",
+                lines = listOfNotNull(
+                    formatClassSpan(e.dayOfWeek, e.startMinute, e.endMinute, e.endDayOffset),
+                    "${stringResource(e.type.label())} • ${stringResource(e.attendance.label())}",
+                    e.topic,
+                    e.location,
+                ),
+                color = course?.let { Color(it.colorArgb) } ?: Color.Gray,
+                icon = if (e.attendance == AttendanceFormat.ONLINE) Icons.Outlined.Videocam else Icons.Outlined.Place,
+            )
+        }
         Box(modifier.fillMaxSize().testTag("screen_schedule")) {
             Column(Modifier.fillMaxSize()) {
                 WeekNavigator(

@@ -1,5 +1,6 @@
 package app.planner
 
+import app.planner.ui.study.initialScrollMinute
 import androidx.compose.ui.graphics.Color
 import app.planner.ui.study.TimetableItem
 import app.planner.ui.study.gridMinuteRange
@@ -47,5 +48,14 @@ class TimetableLayoutTest {
         assertEquals(480 to 1200, gridMinuteRange(listOf(item(1, 600, 660))))
         assertEquals(450 to 1230, gridMinuteRange(listOf(item(1, 455, 500), item(2, 1200, 1215)))) // 7:35 AM, 8:15 PM
         assertEquals(360 to 1440, gridMinuteRange(listOf(item(1, 360, 420), item(2, 1380, 1440))))
+    }
+
+    @Test fun gridOpensAtEightAmEvenWhenAnOvernightClassStretchesItToMidnight() {
+        val overnightMorningPiece = item(1, 0, 60)
+        assertEquals(0 to 1200, gridMinuteRange(listOf(overnightMorningPiece)))
+        assertEquals(480, initialScrollMinute(listOf(overnightMorningPiece)))
+        assertEquals(480, initialScrollMinute(emptyList()))
+        // a class that starts at 7:10 AM should not be hidden above the first visible row
+        assertEquals(420, initialScrollMinute(listOf(item(2, 430, 500))))
     }
 }

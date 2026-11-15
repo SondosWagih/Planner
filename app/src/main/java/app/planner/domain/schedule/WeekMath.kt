@@ -14,6 +14,9 @@ object WeekMath {
         return epochDay - Math.floorMod(dow - SATURDAY, 7)
     }
 
+    /** 0 = Saturday ... 6 = Friday: the column of an ISO weekday in the timetable. */
+    fun dayIndex(isoDay: Int): Int = Math.floorMod(isoDay - SATURDAY, 7)
+
     /** Does a class with this repeat rule take place in the week that starts on [weekStart]? */
     fun occursInWeek(repeatEveryWeeks: Int, anchorWeekStart: Long, weekStart: Long): Boolean {
         if (repeatEveryWeeks <= 1) return true
