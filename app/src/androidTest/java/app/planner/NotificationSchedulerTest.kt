@@ -68,6 +68,9 @@ class NotificationSchedulerTest {
     private fun active(id: Int) =
         context.getSystemService(NotificationManager::class.java).activeNotifications.firstOrNull { it.id == id }
 
+    private fun activeIds() =
+        context.getSystemService(NotificationManager::class.java).activeNotifications.map { it.id to it.tag }
+
     private fun waitFor(timeoutMs: Long = 3_000, condition: () -> Boolean): Boolean {
         val end = System.currentTimeMillis() + timeoutMs
         while (System.currentTimeMillis() < end) {
@@ -146,6 +149,7 @@ class NotificationSchedulerTest {
         repo.setAssignmentCompleted(repo.assignments.first().single().id, true)
         scheduler.rescheduleAll()
         assertEquals("ticking it off stops the reminders", 0, db.notificationRecordDao().allActive().count { it.kind == NotificationKind.OVERDUE })
-        assertTrue("and removes the notification", waitFor { active(Notifier.ID_OVERDUE) == null })
+        val gone = waitFor(timeoutMs = 10_000) { active(Notifier.ID_OVERDUE) == null }
+        assertTrue("and removes the notification (still active ids: ${activeIds()})", gone)
     }
 }

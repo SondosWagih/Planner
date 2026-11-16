@@ -25,11 +25,11 @@ class AlarmHandler(
         when (type) {
             NotificationOwnerType.STUDY_EVENT -> {
                 val event = db.studyEventDao().get(id)?.takeIf { it.deletedAt == null }
-                if (event != null) notifier.showClassNow(event, db.courseDao().get(event.courseId), code)
+                if (event != null) notifier.showClassNow(event, db.courseDao().get(event.courseId), Notifier.itemNotificationId(code))
             }
             NotificationOwnerType.EXAM -> {
                 val exam = db.examDao().get(id)?.takeIf { it.deletedAt == null }
-                if (exam != null) notifier.showExam(exam, db.courseDao().get(exam.courseId), kind, code)
+                if (exam != null) notifier.showExam(exam, db.courseDao().get(exam.courseId), kind, Notifier.itemNotificationId(code))
             }
             NotificationOwnerType.ASSIGNMENT -> showOverdueNow()
             NotificationOwnerType.SESSION -> timer.completeIfExpired(toleranceMs = 1_500)

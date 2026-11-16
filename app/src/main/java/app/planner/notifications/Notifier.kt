@@ -231,6 +231,14 @@ class Notifier(private val context: Context) {
     }
 
     companion object {
+        /**
+         * Notification id for a class or exam alert. The request code is small (an exam with id 3 gives 3), which
+         * would equal a fixed id below and replace or cancel the wrong notification, so a high bit is added.
+         */
+        fun itemNotificationId(requestCode: Int): Int = requestCode or ITEM_ID_FLAG
+
+        private const val ITEM_ID_FLAG = 0x40000000
+
         const val CH_CURRENT = "current"
         const val CH_ADVANCE = "advance"
         const val CH_OVERDUE = "overdue"
