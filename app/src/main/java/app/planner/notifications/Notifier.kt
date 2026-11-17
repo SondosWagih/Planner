@@ -43,7 +43,7 @@ internal fun localizedContext(base: Context): Context {
  * Builds and posts every notification. All sounds follow the phone's notification sound unless the user
  * changes a channel in the system settings (which is respected: channels are never recreated or overridden).
  */
-class Notifier(private val context: Context) {
+open class Notifier(private val context: Context) {
     private val manager = NotificationManagerCompat.from(context)
 
     fun createChannels() {
@@ -160,7 +160,9 @@ class Notifier(private val context: Context) {
         post(ID_OVERDUE, n)
     }
 
-    fun cancelOverdue() = manager.cancel(ID_OVERDUE)
+    open fun cancelOverdue() {
+        manager.cancel(ID_OVERDUE)
+    }
 
     // ---------------- study timer ----------------
 
